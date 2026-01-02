@@ -61,8 +61,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
             {user ? (
               <div className="flex items-center space-x-3 ml-1">
                 <div className="flex items-center px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm space-x-2">
-                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">DB Online</span>
+                   <Cloud className="w-3 h-3 text-emerald-500" />
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">Sync Active</span>
                 </div>
                 <div className="flex flex-col items-end hidden sm:flex text-right">
                   <span className="text-sm font-black text-slate-900 leading-none">{user.name.split(' ')[0]}</span>

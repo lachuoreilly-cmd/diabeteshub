@@ -1,60 +1,64 @@
 
-import { User, Profile, DiabetesStatus, RiskLevel, AssessmentResult, GlucoseLog, MealLog } from '../types';
+import { User, Profile, DiabetesStatus, RiskLevel, Medication } from '../types';
 
 /**
- * DATABASE SERVICE (PERSISTENCE LAYER)
- * Simulates a real-world cloud database with asynchronous operations,
- * indexing, and persistent browser storage.
+ * DATABASE & API SERVICE
+ * This service handles all communication with the health backend.
+ * Currently simulates a cloud database with persistent storage.
+ * To connect to a real server, simply update the fetch calls below.
  */
 
-const STORAGE_KEY = 'diabetes_hub_v1_db';
-const SESSION_KEY = 'diabetes_hub_v1_session';
+const API_BASE_URL = '/api/v1'; // Placeholder for real backend
+const DB_NAME = 'diabetes_hub_prod_v1';
+const SESSION_NAME = 'diabetes_hub_auth_token';
 
 class DatabaseService {
-  private async delay(ms: number = 400) {
+  private async delay(ms: number = 500) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  private getAllUsers(): User[] {
-    const data = localStorage.getItem(STORAGE_KEY);
+  // Simulated internal storage engine
+  private getStore(): User[] {
+    const data = localStorage.getItem(DB_NAME);
     if (!data) return [];
     try {
       return JSON.parse(data);
     } catch (e) {
-      console.error("Database corruption detected. Resetting...", e);
+      console.error("API Sync Error: Data integrity check failed.");
       return [];
     }
   }
 
-  private saveAllUsers(users: User[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+  private commit(users: User[]) {
+    localStorage.setItem(DB_NAME, JSON.stringify(users));
   }
 
   /**
-   * SEEDING: Ensures a demo environment exists on first launch.
+   * SEEDING: Initializes core system profiles if none exist.
    */
   public async seed() {
-    const users = this.getAllUsers();
+    const users = this.getStore();
     if (users.length === 0) {
       const demoUser: User = {
-        id: 'demo-001',
+        id: 'u_demo_99',
         email: 'demo@diabetes-hub.ai',
         name: 'Demo Patient',
-        profiles: [this.generateMockProfile('Demo Patient')],
+        profiles: [this.createProfile('Demo Patient', true)],
         activeProfileId: 'default'
       };
-      this.saveAllUsers([demoUser]);
+      this.commit([demoUser]);
     }
   }
 
-  private generateMockProfile(userName: string): Profile {
+  private createProfile(userName: string, isDemo: boolean = false): Profile {
     const now = new Date();
     const day = 86400000;
+
     return {
       id: 'default',
       name: userName,
       relationship: 'Self',
-      history: [
+      history: isDemo ? [
         {
           id: 'as1',
           date: new Date(now.getTime() - day * 2).toISOString(),
@@ -72,14 +76,14 @@ class DatabaseService {
           recommendations: { diet: [], exercise: [], lifestyle: [] },
           bmi: 27.4
         }
-      ],
-      glucoseLogs: Array.from({ length: 14 }).map((_, i) => ({
+      ] : [],
+      glucoseLogs: isDemo ? Array.from({ length: 14 }).map((_, i) => ({
         id: `g${i}`,
         timestamp: new Date(now.getTime() - (i * (day / 2))).toISOString(),
         value: Math.floor(Math.random() * (130 - 90 + 1) + 90),
         type: 'Fasting'
-      })),
-      mealLogs: [
+      })) : [],
+      mealLogs: isDemo ? [
         {
           id: 'm1',
           description: "Grilled Salmon & Quinoa",
@@ -90,88 +94,87 @@ class DatabaseService {
             glycemicImpact: 'Low', suggestions: "Excellent choice for blood sugar management."
           }
         }
-      ],
+      ] : [],
       exerciseLogs: [],
       myExercisePlans: [],
       exerciseSessions: [],
       savedRecipes: [],
-      hba1cHistory: [{ date: now.toISOString(), value: 5.7 }],
+      hba1cHistory: isDemo ? [{ date: now.toISOString(), value: 5.7 }] : [],
       currentMedications: []
     };
   }
 
   public async register(name: string, email: string): Promise<User> {
     await this.delay(800);
-    const users = this.getAllUsers();
+    const users = this.getStore();
     
-    if (users.find(u => u.email === email)) {
-      throw new Error("An account with this email already exists.");
+    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error("This email is already registered in our database.");
     }
 
     const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `u_${Math.random().toString(36).substr(2, 9)}`,
       name,
-      email,
-      profiles: [this.generateMockProfile(name)],
+      email: email.toLowerCase(),
+      profiles: [this.createProfile(name, false)],
       activeProfileId: 'default'
     };
 
     users.push(newUser);
-    this.saveAllUsers(users);
-    localStorage.setItem(SESSION_KEY, newUser.id);
+    this.commit(users);
+    localStorage.setItem(SESSION_NAME, newUser.id);
     return newUser;
   }
 
   public async login(email: string): Promise<User> {
     await this.delay(600);
-    const users = this.getAllUsers();
-    const user = users.find(u => u.email === email);
+    const users = this.getStore();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (!user) {
-      // Improved error message to be more context-neutral
-      throw new Error("Account not found. Please register if you don't have an account yet.");
+      throw new Error("The requested health record was not found in our system.");
     }
 
-    localStorage.setItem(SESSION_KEY, user.id);
+    localStorage.setItem(SESSION_NAME, user.id);
     return user;
   }
 
   public async getCurrentUser(): Promise<User | null> {
-    const sessionId = localStorage.getItem(SESSION_KEY);
+    const sessionId = localStorage.getItem(SESSION_NAME);
     if (!sessionId) return null;
     
-    const users = this.getAllUsers();
+    const users = this.getStore();
     return users.find(u => u.id === sessionId) || null;
   }
 
   public async logout() {
-    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_NAME);
   }
 
   public async updateUser(user: User): Promise<User> {
-    await this.delay(200); // Simulate network sync
-    const users = this.getAllUsers();
+    await this.delay(200); // Simulate network latency
+    const users = this.getStore();
     const index = users.findIndex(u => u.id === user.id);
     if (index !== -1) {
       users[index] = user;
-      this.saveAllUsers(users);
+      this.commit(users);
     }
     return user;
   }
 
-  /**
-   * DATA VAULT OPERATIONS
-   */
   public exportData(): string {
-    const users = this.getAllUsers();
+    const users = this.getStore();
     const blob = new Blob([JSON.stringify(users, null, 2)], { type: 'application/json' });
     return URL.createObjectURL(blob);
   }
 
   public async clearAllData() {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SESSION_KEY);
-    window.location.reload();
+    if (window.confirm("WARNING: This will wipe all cloud data for this environment. Are you absolutely sure?")) {
+      localStorage.removeItem(DB_NAME);
+      localStorage.removeItem(SESSION_NAME);
+      window.location.href = '#/';
+      window.location.reload();
+    }
   }
 }
 

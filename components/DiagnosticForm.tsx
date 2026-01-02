@@ -106,13 +106,13 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
   const validateField = (name: string, value: any): string => {
     switch (name) {
-      case 'age': if (value < 1 || value > 120) return "1-120 yrs"; break;
-      case 'weightLbs': if (value < 30 || value > 700) return "30-700 lbs"; break;
-      case 'heightFeet': if (value < 1 || value > 8) return "1-8 ft"; break;
-      case 'heightInches': if (value < 0 || value > 11) return "0-11 in"; break;
-      case 'systolicBP': if (value < 70 || value > 250) return "70-250 mmHg"; break;
-      case 'diastolicBP': if (value < 40 || value > 150) return "40-150 mmHg"; break;
-      case 'hba1c': if (value && (value < 3 || value > 20)) return "3-20%"; break;
+      case 'age': if (value < 1 || value > 120) return "Valid age: 1-120 yrs"; break;
+      case 'weightLbs': if (value < 30 || value > 700) return "Valid weight: 30-700 lbs"; break;
+      case 'heightFeet': if (value < 1 || value > 8) return "Valid height: 1-8 ft"; break;
+      case 'heightInches': if (value < 0 || value > 11) return "Valid height: 0-11 in"; break;
+      case 'systolicBP': if (value < 70 || value > 250) return "Valid range: 70-250 mmHg"; break;
+      case 'diastolicBP': if (value < 40 || value > 150) return "Valid range: 40-150 mmHg"; break;
+      case 'hba1c': if (value && (value < 3 || value > 20)) return "Valid range: 3-20%"; break;
     }
     return "";
   };
@@ -198,14 +198,14 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     );
   }
 
-  const inputClasses = (name: string) => `w-full px-4 py-3 rounded-xl border bg-white text-slate-900 outline-none transition-all font-semibold ${
+  const inputClasses = (name: string, fontSize: 'text-xl' | 'text-base' = 'text-xl') => `w-full px-5 py-4 rounded-xl border bg-white text-slate-900 outline-none transition-all font-bold ${fontSize} ${
     errors[name] ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5'
   }`;
 
   const Label = ({ text, sub }: { text: string, sub?: string }) => (
-    <div className="mb-2">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{text}</p>
-      {sub && <p className="text-[9px] text-slate-400 font-medium italic">{sub}</p>}
+    <div className="mb-3 min-h-[44px]">
+      <p className="text-sm font-bold text-slate-700 uppercase tracking-wide">{text}</p>
+      {sub && <p className="text-xs text-slate-500 font-medium mt-1 leading-tight">{sub}</p>}
     </div>
   );
 
@@ -221,30 +221,30 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
             </div>
             <div className="flex items-center space-x-3">
               {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
+                <div key={i} className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${
                   step === i ? 'bg-blue-600 text-white shadow-lg' : 
                   step > i ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
                 }`}>
-                  {step > i ? <CheckCircle2 className="w-4 h-4" /> : i}
+                  {step > i ? <CheckCircle2 className="w-5 h-5" /> : i}
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 lg:p-12">
+        <form onSubmit={handleSubmit} className="p-8 lg:p-14">
           {/* STEP 1: Biometrics & Anthropometrics */}
           {step === 1 && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-3 text-blue-600">
-                <div className="p-2 bg-blue-100/50 rounded-lg"><Globe className="w-5 h-5" /></div>
-                <h3 className="font-black uppercase text-sm tracking-widest">Biometrics & Anthropometrics</h3>
+            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-4 text-blue-600">
+                <div className="p-3 bg-blue-100/50 rounded-2xl"><Globe className="w-6 h-6" /></div>
+                <h3 className="font-black uppercase text-base tracking-widest">Biometrics & Anthropometrics</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-14">
                 <div className="space-y-1">
                   <Label text="Age" />
                   <input type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses('age')} />
-                  {errors.age && <p className="text-[10px] text-red-500 font-bold">{errors.age}</p>}
+                  {errors.age && <p className="text-sm text-red-500 font-bold mt-2">{errors.age}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Biological Gender" />
@@ -255,7 +255,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <Label text="Ethnicity" sub="Affects genetic metabolic risk" />
+                  <Label text="Ethnicity" sub="Genetic metabolic risk factor" />
                   <select name="ethnicity" value={formData.ethnicity} onChange={handleChange} className={inputClasses('ethnicity')}>
                     <option>Not specified</option>
                     <option>White / Caucasian</option>
@@ -270,6 +270,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                 <div className="space-y-1">
                   <Label text="Weight (Lbs)" />
                   <input type="number" name="weightLbs" value={formData.weightLbs} onChange={handleChange} className={inputClasses('weightLbs')} />
+                  {errors.weightLbs && <p className="text-sm text-red-500 font-bold mt-2">{errors.weightLbs}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Height (Feet)" />
@@ -285,45 +286,48 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
           {/* STEP 2: Clinical Markers & Known Labs */}
           {step === 2 && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-3 text-red-600">
-                <div className="p-2 bg-red-100/50 rounded-lg"><Beaker className="w-5 h-5" /></div>
-                <h3 className="font-black uppercase text-sm tracking-widest">Clinical Markers & Labs</h3>
+            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-4 text-red-600">
+                <div className="p-3 bg-red-100/50 rounded-2xl"><Beaker className="w-6 h-6" /></div>
+                <h3 className="font-black uppercase text-base tracking-widest">Clinical Markers & Labs</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <div className="space-y-10">
+                  <div className="grid grid-cols-2 gap-8">
                     <div>
                       <Label text="Systolic BP" sub="Upper Number" />
                       <input type="number" name="systolicBP" value={formData.systolicBP} onChange={handleChange} className={inputClasses('systolicBP')} />
+                      {errors.systolicBP && <p className="text-sm text-red-500 font-bold mt-2">{errors.systolicBP}</p>}
                     </div>
                     <div>
                       <Label text="Diastolic BP" sub="Lower Number" />
                       <input type="number" name="diastolicBP" value={formData.diastolicBP} onChange={handleChange} className={inputClasses('diastolicBP')} />
+                      {errors.diastolicBP && <p className="text-sm text-red-500 font-bold mt-2">{errors.diastolicBP}</p>}
                     </div>
                   </div>
                   <div>
                     <Label text="Family History" sub="T2D in first-degree relative?" />
                     <div className="flex gap-4">
                       {[true, false].map((val) => (
-                        <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-3 rounded-xl font-bold border transition-all ${formData.familyHistory === val ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-100'}`}>
+                        <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-5 rounded-2xl font-black text-lg border transition-all ${formData.familyHistory === val ? 'bg-red-600 text-white border-red-600 shadow-lg shadow-red-100' : 'bg-white text-slate-500 border-slate-200 hover:border-red-200'}`}>
                           {val ? 'Yes' : 'No'}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 space-y-6">
-                  <div className="flex items-center space-x-2 text-blue-600 mb-2">
-                    <History className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Recent Lab Results</span>
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 space-y-8 shadow-sm">
+                  <div className="flex items-center space-x-3 text-blue-600 mb-2">
+                    <History className="w-5 h-5" />
+                    <span className="text-xs font-black uppercase tracking-widest">Recent Lab Diagnostics</span>
                   </div>
                   <div>
-                    <Label text="Most Recent HbA1c (%)" sub="Leave blank if unknown" />
+                    <Label text="Latest HbA1c (%)" sub="Leave blank if unknown" />
                     <input type="number" step="0.1" name="hba1c" value={formData.hba1c} onChange={handleChange} placeholder="e.g. 5.7" className={inputClasses('hba1c')} />
+                    {errors.hba1c && <p className="text-sm text-red-500 font-bold mt-2">{errors.hba1c}</p>}
                   </div>
                   <div>
-                    <Label text="Known Fasting Glucose" sub="mg/dL" />
+                    <Label text="Fasting Glucose" sub="mg/dL" />
                     <input type="number" name="lastGlucose" value={formData.lastGlucose} onChange={handleChange} placeholder="e.g. 98" className={inputClasses('lastGlucose')} />
                   </div>
                 </div>
@@ -333,35 +337,41 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
           {/* STEP 3: Lifestyle Stressors */}
           {step === 3 && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-3 text-indigo-600">
-                <div className="p-2 bg-indigo-100/50 rounded-lg"><Moon className="w-5 h-5" /></div>
-                <h3 className="font-black uppercase text-sm tracking-widest">Metabolic Stressors</h3>
+            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-4 text-indigo-600">
+                <div className="p-3 bg-indigo-100/50 rounded-2xl"><Moon className="w-6 h-6" /></div>
+                <h3 className="font-black uppercase text-base tracking-widest">Metabolic Stressors</h3>
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
+                <div className="space-y-1">
                   <Label text="Sleep Duration" sub="Hours per night" />
-                  <input type="number" name="sleep_hours_per_night" value={formData.sleep_hours_per_night} onChange={handleChange} className={inputClasses('sleep_hours_per_night')} />
+                  <input 
+                    type="number" 
+                    name="sleep_hours_per_night" 
+                    value={formData.sleep_hours_per_night} 
+                    onChange={handleChange} 
+                    className={`${inputClasses('sleep_hours_per_night')} max-w-[120px]`} 
+                  />
                 </div>
-                <div>
+                <div className="space-y-1">
                   <Label text="Stress Level" />
-                  <select name="stress_level" value={formData.stress_level} onChange={handleChange} className={inputClasses('stress_level')}>
+                  <select name="stress_level" value={formData.stress_level} onChange={handleChange} className={inputClasses('stress_level', 'text-base')}>
                     <option value="low">Low (Rarely stressed)</option>
                     <option value="moderate">Moderate (Normal pressure)</option>
                     <option value="high">High (Chronic/Intense)</option>
                   </select>
                 </div>
-                <div>
+                <div className="space-y-1">
                   <Label text="Smoking Status" />
-                  <select name="smoking_status" value={formData.smoking_status} onChange={handleChange} className={inputClasses('smoking_status')}>
+                  <select name="smoking_status" value={formData.smoking_status} onChange={handleChange} className={inputClasses('smoking_status', 'text-base')}>
                     <option value="never">Never Smoked</option>
                     <option value="former">Former Smoker</option>
                     <option value="current">Current Smoker</option>
                   </select>
                 </div>
-                <div>
-                  <Label text="Alcohol Consumption" />
-                  <select name="alcohol_consumption" value={formData.alcohol_consumption} onChange={handleChange} className={inputClasses('alcohol_consumption')}>
+                <div className="space-y-1">
+                  <Label text="Alcohol Intake" />
+                  <select name="alcohol_consumption" value={formData.alcohol_consumption} onChange={handleChange} className={inputClasses('alcohol_consumption', 'text-base')}>
                     <option value="none">None</option>
                     <option value="occasional">Occasional (1-2 / month)</option>
                     <option value="moderate">Moderate (1-2 / week)</option>
@@ -374,18 +384,18 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
           {/* STEP 4: Nutrition & Activity */}
           {step === 4 && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-3 text-green-600">
-                <div className="p-2 bg-green-100/50 rounded-lg"><Utensils className="w-5 h-5" /></div>
-                <h3 className="font-black uppercase text-sm tracking-widest">Nutrition & Physical Load</h3>
+            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-4 text-green-600">
+                <div className="p-3 bg-green-100/50 rounded-2xl"><Utensils className="w-6 h-6" /></div>
+                <h3 className="font-black uppercase text-base tracking-widest">Nutrition & Physical Load</h3>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <div className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <div className="space-y-10">
                   <div>
                     <Label text="Dietary Preference" />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                       {['Non-Veg', 'Vegetarian', 'Vegan', 'Keto', 'Paleo'].map(pref => (
-                        <button key={pref} type="button" onClick={() => setFormData({ ...formData, dietPreference: pref as any })} className={`px-4 py-3 rounded-xl text-xs font-bold border transition-all ${formData.dietPreference === pref ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-500 border-slate-100'}`}>
+                        <button key={pref} type="button" onClick={() => setFormData({ ...formData, dietPreference: pref as any })} className={`px-5 py-4 rounded-2xl text-sm font-black border transition-all ${formData.dietPreference === pref ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-100' : 'bg-white text-slate-500 border-slate-200 hover:border-green-200'}`}>
                           {pref}
                         </button>
                       ))}
@@ -402,10 +412,10 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     </select>
                   </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 space-y-6">
-                  <div className="flex items-center space-x-2 text-amber-600 mb-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Nutritional Survey</span>
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 space-y-8 shadow-sm">
+                  <div className="flex items-center space-x-3 text-amber-600 mb-2">
+                    <Sparkles className="w-5 h-5" />
+                    <span className="text-xs font-black uppercase tracking-widest">Nutritional Survey</span>
                   </div>
                   <div>
                     <Label text="Sugary Drinks / Soda" />
@@ -416,7 +426,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     </select>
                   </div>
                   <div>
-                    <Label text="Highly Processed Foods" sub="Fast food, packaged snacks" />
+                    <Label text="Processed Foods" sub="Packaged snacks, fast food" />
                     <select name="dietSurvey.processedFoods" value={formData.dietSurvey.processedFoods} onChange={handleChange} className={inputClasses('processedFoods')}>
                       <option>Rarely</option>
                       <option>A few times a month</option>
@@ -425,7 +435,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     </select>
                   </div>
                   <div>
-                    <Label text="High Carb / Starch Frequency" sub="Bread, rice, pasta, potatoes" />
+                    <Label text="Carb / Starch Intake" sub="Bread, rice, pasta frequency" />
                     <select name="dietSurvey.highCarbFrequency" value={formData.dietSurvey.highCarbFrequency} onChange={handleChange} className={inputClasses('highCarbFrequency')}>
                       <option>Occasionally</option>
                       <option>Once a day</option>
@@ -437,21 +447,21 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
             </div>
           )}
 
-          {/* STEP 5: Medication & Final Confirmation */}
+          {/* STEP 5: Final Confirmation */}
           {step === 5 && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-3 text-blue-600">
-                <div className="p-2 bg-blue-100/50 rounded-lg"><CheckCircle2 className="w-5 h-5" /></div>
-                <h3 className="font-black uppercase text-sm tracking-widest">Final Calculation</h3>
+            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-4 text-blue-600">
+                <div className="p-3 bg-blue-100/50 rounded-2xl"><CheckCircle2 className="w-6 h-6" /></div>
+                <h3 className="font-black uppercase text-base tracking-widest">Final Calculation</h3>
               </div>
-              <div className="text-center py-10 space-y-8 bg-white rounded-[3rem] border border-blue-50 shadow-inner">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                   <ShieldCheck className="w-10 h-10 text-blue-600" />
+              <div className="text-center py-16 space-y-10 bg-white rounded-[4rem] border border-blue-50 shadow-inner">
+                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                   <ShieldCheck className="w-12 h-12 text-blue-600" />
                 </div>
-                <div className="max-w-lg mx-auto space-y-4 px-6">
-                  <h3 className="text-3xl font-black text-slate-900 leading-tight">Biometric Engine Locked</h3>
-                  <p className="text-slate-500 font-medium leading-relaxed">
-                    All metabolic indicators have been collected. Our system will now integrate your clinical history, habits, and genetic risk to forecast your current HbA1c and risk status.
+                <div className="max-w-xl mx-auto space-y-6 px-8">
+                  <h3 className="text-4xl font-black text-slate-900 leading-tight">Metabolic Lock Complete</h3>
+                  <p className="text-slate-500 font-medium text-lg leading-relaxed">
+                    All indicators have been synchronized. Our biological engine is ready to synthesize your results and forecast your HbA1c trajectory.
                   </p>
                 </div>
               </div>
@@ -459,11 +469,11 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
           )}
 
           {/* Navigation */}
-          <div className="mt-16 flex flex-col sm:flex-row items-center justify-between border-t border-blue-50 pt-10 gap-6">
+          <div className="mt-20 flex flex-col sm:flex-row items-center justify-between border-t border-blue-50 pt-12 gap-8">
             {step > 1 ? (
-              <button type="button" onClick={() => setStep(step - 1)} className="flex items-center space-x-2 text-slate-400 font-black px-8 py-4 hover:bg-slate-50 rounded-2xl transition-all">
-                <ChevronLeft className="w-5 h-5" />
-                <span className="uppercase tracking-widest text-[10px]">Previous</span>
+              <button type="button" onClick={() => setStep(step - 1)} className="flex items-center space-x-3 text-slate-400 font-black px-10 py-5 hover:bg-slate-50 rounded-2xl transition-all">
+                <ChevronLeft className="w-6 h-6" />
+                <span className="uppercase tracking-widest text-xs">Previous</span>
               </button>
             ) : <div />}
 
@@ -471,19 +481,19 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
               type={step < 5 ? "button" : "submit"}
               onClick={step < 5 ? () => { if(isStepValid()) setStep(step + 1); } : undefined}
               disabled={loading}
-              className="w-full sm:w-auto flex items-center justify-center space-x-3 bg-blue-600 text-white px-12 py-5 rounded-[2rem] font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 disabled:opacity-50"
+              className="w-full sm:w-auto flex items-center justify-center space-x-4 bg-blue-600 text-white px-14 py-6 rounded-[2.5rem] font-black hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/20 disabled:opacity-50 active:scale-95 text-lg"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="uppercase tracking-widest text-xs">Simulating Outcomes...</span>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="uppercase tracking-widest text-sm">Synthesizing...</span>
                 </>
               ) : (
                 <>
-                  <span className="uppercase tracking-widest text-xs">
+                  <span className="uppercase tracking-widest text-sm">
                     {step < 5 ? "Continue" : "Generate Forecast"}
                   </span>
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-6 h-6" />
                 </>
               )}
             </button>

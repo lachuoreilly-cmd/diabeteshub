@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { AssessmentResult, DiabetesStatus } from '../types';
-import { ShieldAlert, CheckCircle, Flame, Apple, Dumbbell, RefreshCcw, Info, Activity, ClipboardList, Edit3, Printer, Save, UserPlus, Lock, Gift, Sparkles, Map, Thermometer } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ShieldAlert, CheckCircle, Flame, Apple, Dumbbell, RefreshCcw, Info, Activity, ClipboardList, Edit3, Printer, Save, UserPlus, Lock, Gift, Sparkles, Map, Thermometer, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface ResultsDashboardProps {
   result: AssessmentResult;
@@ -13,6 +13,7 @@ interface ResultsDashboardProps {
 
 const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, onEdit, isGuest = false }) => {
   const [needleRotation, setNeedleRotation] = useState(-90);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const targetRotation = result.status === DiabetesStatus.GOOD ? -60 : 
@@ -59,12 +60,34 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
                 Our engine has simulated your metabolic future based on the provided clinical indicators.
               </p>
            </div>
-           <button onClick={startTutorial} className="px-12 py-6 bg-blue-600 text-white font-black rounded-[2rem] hover:bg-blue-700 transition-all shadow-xl flex items-center space-x-3 active:scale-95">
-             <Map className="w-6 h-6" />
-             <span>Take App Tour</span>
-           </button>
+           <div className="flex flex-col sm:flex-row gap-4">
+              {isGuest && (
+                <button 
+                  onClick={() => navigate('/auth')}
+                  className="px-10 py-6 bg-emerald-600 text-white font-black rounded-[2rem] hover:bg-emerald-700 transition-all shadow-xl flex items-center justify-center space-x-3 active:scale-95 ring-4 ring-emerald-500/10"
+                >
+                  <Save className="w-6 h-6" />
+                  <span>Save Results to Account</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              )}
+              <button onClick={startTutorial} className="px-10 py-6 bg-blue-600 text-white font-black rounded-[2rem] hover:bg-blue-700 transition-all shadow-xl flex items-center justify-center space-x-3 active:scale-95">
+                <Map className="w-6 h-6" />
+                <span>Take App Tour</span>
+              </button>
+           </div>
         </div>
       </div>
+
+      {isGuest && (
+        <div className="mb-8 p-6 bg-amber-50 border border-amber-100 rounded-[2rem] flex items-center space-x-4 animate-in slide-in-from-left-4 duration-700 delay-300">
+          <Info className="w-8 h-8 text-amber-500 shrink-0" />
+          <p className="text-sm font-bold text-amber-900 leading-relaxed">
+            You are currently viewing these results as a Guest. These findings will not be saved. 
+            <button onClick={() => navigate('/auth')} className="ml-1 text-blue-600 underline hover:text-blue-700">Register now</button> to track your trends over time.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-8 mb-8">
         <div className={`flex-[2] p-8 rounded-[3rem] border-2 ${getStatusColorClass(result.status)} relative overflow-hidden`}>

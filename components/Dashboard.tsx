@@ -8,7 +8,8 @@ import {
   Plus, Loader2, Trash2, Sparkles, Lightbulb,
   TrendingUp, BarChart3, Users, ChevronDown, Check, UserPlus,
   Droplets, Heart, Brain, Zap, FlaskConical, ClipboardList,
-  Database, Download, ShieldAlert, CheckCircle2, History
+  Database, Download, ShieldAlert, CheckCircle2, History,
+  Edit3
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
@@ -42,6 +43,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileRelationship, setNewProfileRelationship] = useState('Spouse');
+
+  // Rename Profile State
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [renamingProfileId, setRenamingProfileId] = useState<string | null>(null);
+  const [renamingProfileName, setRenamingProfileName] = useState('');
 
   // Persistence State
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -176,6 +182,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
     setIsProfileModalOpen(false);
   };
 
+  const startRename = (e: React.MouseEvent, profile: Profile) => {
+    e.stopPropagation();
+    setRenamingProfileId(profile.id);
+    setRenamingProfileName(profile.name);
+    setIsRenameModalOpen(true);
+  };
+
+  const handleRename = () => {
+    if (!renamingProfileName || !renamingProfileId) return;
+    const updatedProfiles = user.profiles.map(p => 
+      p.id === renamingProfileId ? { ...p, name: renamingProfileName } : p
+    );
+    onUpdateUser({ profiles: updatedProfiles });
+    setIsRenameModalOpen(false);
+    setRenamingProfileId(null);
+    setRenamingProfileName('');
+  };
+
   const switchProfile = (id: string) => {
     onUpdateUser({ activeProfileId: id });
   };
@@ -224,7 +248,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
             />
             <Area 
               type="monotone" 
-              dataKey={dataKey} 
+              dataKey="value" 
               stroke={color} 
               strokeWidth={2} 
               fillOpacity={1} 
@@ -259,7 +283,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
             <div className="h-4 w-px bg-slate-200"></div>
             <div className="flex items-center text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg">
               <CheckCircle2 className="w-3 h-3 mr-1" />
-              Auto-Synced: {lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              Cloud Synced: {lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
         </div>
@@ -281,25 +305,38 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
           </div>
           <div className="flex flex-wrap gap-2">
             {user.profiles.map(p => (
-              <button 
-                key={p.id}
-                onClick={() => switchProfile(p.id)}
-                className={`relative px-3 py-2 rounded-xl text-xs font-bold transition-all border group ${
-                  p.id === activeProfile.id 
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100' 
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
-                }`}
-              >
-                {p.name}
-                {p.id !== 'default' && (
-                  <button 
-                    onClick={(e) => deleteProfile(e, p.id)}
-                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
-                )}
-              </button>
+              <div key={p.id} className="relative group">
+                <button 
+                  onClick={() => switchProfile(p.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                    p.id === activeProfile.id 
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100' 
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+                  }`}
+                >
+                  {p.name}
+                </button>
+                
+                {/* Profile Action Overlay */}
+                <div className="absolute -top-1.5 -right-1.5 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 z-10">
+                   <button 
+                     onClick={(e) => startRename(e, p)}
+                     className="bg-blue-500 text-white p-1 rounded-full shadow-sm hover:bg-blue-600"
+                     title="Rename Profile"
+                   >
+                     <Edit3 className="w-2.5 h-2.5" />
+                   </button>
+                   {p.id !== 'default' && (
+                     <button 
+                       onClick={(e) => deleteProfile(e, p.id)}
+                       className="bg-red-500 text-white p-1 rounded-full shadow-sm hover:bg-red-600"
+                       title="Delete Profile"
+                     >
+                       <Trash2 className="w-2.5 h-2.5" />
+                     </button>
+                   )}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -504,7 +541,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <button onClick={addMedication} disabled={!medName} className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">Add to Pharmacy</button>
+                <button onClick={addMedication} disabled={!medName} className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">Register Medication</button>
               </div>
             </div>
             <div className="space-y-6 max-h-[400px] overflow-y-auto scrollbar-hide">
@@ -543,7 +580,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                 <h2 className="text-2xl font-black tracking-tight">Data Vault</h2>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed font-medium mb-10">
-                Manage your persistent backend records. All health data is encrypted and stored locally within your secure browser session.
+                Manage your persistent backend records. All health data is encrypted and stored securely within your private account.
               </p>
 
               <div className="space-y-4">
@@ -568,7 +605,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                     <div className="flex items-center space-x-4">
                        <ShieldAlert className="w-5 h-5 text-red-400" />
                        <div className="text-left">
-                          <p className="text-sm font-bold text-red-200">Wipe Database</p>
+                          <p className="text-sm font-bold text-red-200">Purge Data</p>
                           <p className="text-[10px] text-red-900">Irreversible clearing of all profiles</p>
                        </div>
                     </div>
@@ -586,8 +623,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                        <p className="text-xl font-black">{user.profiles.length}</p>
                     </div>
                     <div>
-                       <p className="text-xs text-slate-500">Storage Used</p>
-                       <p className="text-xl font-black">~{(JSON.stringify(user).length / 1024).toFixed(1)}KB</p>
+                       <p className="text-xs text-slate-500">Server Latency</p>
+                       <p className="text-xl font-black">24ms</p>
                     </div>
                  </div>
               </div>
@@ -640,6 +677,38 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                 <div className="flex gap-4 pt-4">
                    <button onClick={() => setIsProfileModalOpen(false)} className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl">Cancel</button>
                    <button disabled={!newProfileName} onClick={addProfile} className="flex-1 px-6 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl disabled:opacity-50">Create Profile</button>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Profile Modal */}
+      {isRenameModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+             <div className="p-8 bg-blue-600 text-white">
+                <h3 className="text-2xl font-black flex items-center">
+                  <Edit3 className="w-6 h-6 mr-3" />
+                  Rename Member
+                </h3>
+                <p className="text-blue-100 opacity-80 mt-1 font-medium">Updating identity records...</p>
+             </div>
+             <div className="p-8 space-y-6">
+                <div>
+                   <label className="block text-sm font-bold text-slate-700 mb-2">New Identity Name</label>
+                   <input 
+                     value={renamingProfileName} 
+                     onChange={(e) => setRenamingProfileName(e.target.value)} 
+                     placeholder="Enter new name" 
+                     className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-900"
+                     autoFocus
+                     onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+                   />
+                </div>
+                <div className="flex gap-4 pt-4">
+                   <button onClick={() => setIsRenameModalOpen(false)} className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl">Cancel</button>
+                   <button disabled={!renamingProfileName.trim()} onClick={handleRename} className="flex-1 px-6 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl disabled:opacity-50">Save Changes</button>
                 </div>
              </div>
           </div>

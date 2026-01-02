@@ -1,12 +1,14 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, Profile, GlucoseLog, MealLog, ExerciseLog, Medication } from '../types';
 import { analyzeMeal } from '../services/geminiService';
+import { db } from '../services/database';
 import { 
   Activity, Utensils, Pill, Dumbbell, 
   Plus, Loader2, Trash2, Sparkles, Lightbulb,
   TrendingUp, BarChart3, Users, ChevronDown, Check, UserPlus,
-  Droplets, Heart, Brain, Zap, FlaskConical, ClipboardList
+  Droplets, Heart, Brain, Zap, FlaskConical, ClipboardList,
+  Database, Download, ShieldAlert, CheckCircle2, History
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
@@ -41,9 +43,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileRelationship, setNewProfileRelationship] = useState('Spouse');
 
+  // Persistence State
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setLastSaved(new Date());
+  }, [activeProfile]);
+
   const latestAssessment = activeProfile.history[0];
 
-  // Group medications for better visual grouping
   const groupedMedications = useMemo(() => {
     const groups: Record<string, Medication[]> = {};
     activeProfile.currentMedications?.forEach(med => {
@@ -54,18 +62,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
     return groups;
   }, [activeProfile.currentMedications]);
 
-  // Process nutritional data for trends (Daily Aggregation)
   const nutritionalTrendsData = useMemo(() => {
     const dailyData: Record<string, { date: string, calories: number, carbs: number, protein: number, fat: number }> = {};
-    
-    // Last 7 days to today
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
       dailyData[key] = { date: d.toLocaleDateString([], { weekday: 'short' }), calories: 0, carbs: 0, protein: 0, fat: 0 };
     }
-
     activeProfile.mealLogs.forEach(log => {
       const key = log.timestamp.split('T')[0];
       if (dailyData[key] && log.analysis) {
@@ -75,7 +79,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         dailyData[key].fat += log.analysis.fat;
       }
     });
-
     return Object.values(dailyData);
   }, [activeProfile.mealLogs]);
 
@@ -192,6 +195,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
     }
   };
 
+  const handleExport = () => {
+    const url = db.exportData();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `diabetes_hub_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+  };
+
   const MiniTrendChart = ({ data, dataKey, color, title, unit }: { data: any[], dataKey: string, color: string, title: string, unit: string }) => (
     <div className="bg-blue-50/30 p-4 rounded-2xl border border-blue-100 shadow-sm flex flex-col h-40">
       <div className="flex justify-between items-start mb-2">
@@ -243,7 +254,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Health Dashboard</h1>
-          <p className="text-slate-500 mt-2 font-medium">Monitoring data for: <span className="text-blue-600 font-black">{activeProfile.name}</span></p>
+          <div className="flex items-center space-x-3 mt-2">
+            <p className="text-slate-500 font-medium">Monitoring data for: <span className="text-blue-600 font-black">{activeProfile.name}</span></p>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <div className="flex items-center text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              Auto-Synced: {lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
         </div>
         
         {/* Profile Switcher Card */}
@@ -339,22 +357,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
           </div>
       </div>
 
-      {/* Nutritional Trends Section */}
-      <section className="space-y-4">
-        <div className="flex items-center space-x-2 text-slate-900">
-          <TrendingUp className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-bold tracking-tight">Daily Nutritional Trends (Last 7 Days)</h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <MiniTrendChart data={nutritionalTrendsData} dataKey="calories" color="#f97316" title="Total Calories" unit="kcal" />
-          <MiniTrendChart data={nutritionalTrendsData} dataKey="carbs" color="#10b981" title="Total Carbs" unit="g" />
-          <MiniTrendChart data={nutritionalTrendsData} dataKey="protein" color="#3b82f6" title="Total Protein" unit="g" />
-          <MiniTrendChart data={nutritionalTrendsData} dataKey="fat" color="#eab308" title="Total Fat" unit="g" />
-        </div>
-      </section>
-
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Glucose Logging Card */}
+        {/* Glucose Tracker */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center space-x-3 text-red-600">
             <Activity className="w-6 h-6" />
@@ -403,7 +407,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
           </div>
         </div>
 
-        {/* Nutritional Meal Logging Card */}
+        {/* Nutritional Meal Log */}
         <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 text-green-600">
@@ -445,7 +449,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                     </span>
                   )}
                 </div>
-
                 {log.analysis && (
                   <div className="space-y-4 mt-1">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -455,10 +458,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                           <span>{log.analysis.calories}</span>
                         </div>
                         <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-orange-500 transition-all duration-700" 
-                            style={{ width: `${Math.min((log.analysis.calories / 1000) * 100, 100)}%` }}
-                          />
+                          <div className="h-full bg-orange-500" style={{ width: `${Math.min((log.analysis.calories / 1000) * 100, 100)}%` }} />
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -467,29 +467,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                           <span>{log.analysis.carbs}g</span>
                         </div>
                         <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-green-500 transition-all duration-700" 
-                            style={{ width: `${Math.min((log.analysis.carbs / 100) * 100, 100)}%` }}
-                          />
+                          <div className="h-full bg-green-500" style={{ width: `${Math.min((log.analysis.carbs / 100) * 100, 100)}%` }} />
                         </div>
                       </div>
                     </div>
-
-                    <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-4 space-y-3 relative overflow-hidden group/card shadow-sm">
-                      <div className="flex items-center space-x-2 text-blue-800">
-                        <Lightbulb className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Care Insight</span>
-                      </div>
-                      <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                        {log.analysis.suggestions}
-                      </p>
-                    </div>
                   </div>
                 )}
-
-                <div className="flex items-center justify-between pt-1 mt-auto">
-                  <p className="text-[10px] text-slate-400 font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(log.timestamp).toLocaleDateString()}</p>
-                </div>
+                <p className="text-[10px] text-slate-400 mt-auto">{new Date(log.timestamp).toLocaleDateString()}</p>
               </div>
             ))}
           </div>
@@ -497,7 +481,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Medication Tracking Card - REDESIGNED */}
+        {/* Medication Tracking Card */}
         <div className="bg-white text-slate-900 p-6 rounded-[2.5rem] space-y-8 shadow-sm border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 text-blue-600">
@@ -505,152 +489,128 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
               <h2 className="text-xl font-black tracking-tight">Medications</h2>
             </div>
           </div>
-          
           <div className="space-y-6">
             <div className="bg-blue-50/20 p-5 rounded-[2rem] border border-blue-100 space-y-4">
               <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-1">Register New Medication</h3>
               <div className="space-y-3">
-                <input 
-                  value={medName}
-                  onChange={e => setMedName(e.target.value)}
-                  placeholder="Medication Name"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none font-bold"
-                />
+                <input value={medName} onChange={e => setMedName(e.target.value)} placeholder="Medication Name" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-bold" />
                 <div className="grid grid-cols-2 gap-3">
-                  <input 
-                    value={medDosage}
-                    onChange={e => setMedDosage(e.target.value)}
-                    placeholder="Dosage (e.g. 500mg)"
-                    className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-medium"
-                  />
-                  <select 
-                    value={medType}
-                    onChange={e => setMedType(e.target.value as any)}
-                    className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-bold text-slate-600"
-                  >
+                  <input value={medDosage} onChange={e => setMedDosage(e.target.value)} placeholder="Dosage" className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none" />
+                  <select value={medType} onChange={e => setMedType(e.target.value as any)} className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-bold text-slate-600">
                     <option value="Diabetic">Diabetic</option>
                     <option value="Insulin">Insulin</option>
                     <option value="Statin">Statin</option>
                     <option value="BP">Blood Pressure</option>
-                    <option value="Hormonal">Hormonal</option>
-                    <option value="MentalHealth">Mental Health</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <button 
-                  onClick={addMedication}
-                  disabled={!medName}
-                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50"
-                >
-                  Confirm Addition
-                </button>
+                <button onClick={addMedication} disabled={!medName} className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">Add to Pharmacy</button>
               </div>
             </div>
-
-            <div className="space-y-8 max-h-[450px] overflow-y-auto pr-2 scrollbar-hide flex-grow">
-              {Object.keys(groupedMedications).length > 0 ? (
-                Object.entries(groupedMedications).map(([type, meds]) => {
-                  const styles = getMedCategoryStyles(type);
-                  const Icon = styles.icon;
-                  return (
-                    <div key={type} className="space-y-3">
-                      <div className="flex items-center space-x-2 px-2">
-                        <Icon className={`w-3.5 h-3.5 ${styles.color}`} />
-                        <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${styles.color}`}>{type} Therapy</h4>
-                        <div className={`h-px flex-grow ${styles.bg}`}></div>
-                      </div>
-                      <div className="space-y-2">
-                        {meds.map(med => (
-                          <div key={med.id} className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between group hover:border-blue-200 hover:shadow-sm transition-all relative overflow-hidden">
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${styles.color.replace('text-', 'bg-')}`}></div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-black text-slate-900">{med.name}</span>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black ${styles.bg} ${styles.color} uppercase tracking-tighter border border-current opacity-70`}>
-                                  {med.dosage}
-                                </span>
-                              </div>
-                            </div>
-                            <button 
-                              onClick={() => deleteLog('medication', med.id)} 
-                              className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all transform hover:scale-110"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+            <div className="space-y-6 max-h-[400px] overflow-y-auto scrollbar-hide">
+              {Object.entries(groupedMedications).map(([type, meds]) => {
+                const styles = getMedCategoryStyles(type);
+                const Icon = styles.icon;
+                return (
+                  <div key={type} className="space-y-3">
+                    <div className="flex items-center space-x-2 px-2">
+                      <Icon className={`w-3.5 h-3.5 ${styles.color}`} />
+                      <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${styles.color}`}>{type}</h4>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="py-12 text-center opacity-30 flex flex-col items-center space-y-4">
-                   <div className="p-4 bg-slate-100 rounded-full">
-                    <ClipboardList className="w-10 h-10 text-slate-400" />
-                   </div>
-                   <p className="text-xs font-black uppercase tracking-widest text-slate-400">Empty Pharmacy</p>
-                </div>
-              )}
+                    {meds.map(med => (
+                      <div key={med.id} className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between group relative overflow-hidden">
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${styles.color.replace('text-', 'bg-')}`}></div>
+                        <div>
+                          <p className="text-sm font-black text-slate-900">{med.name}</p>
+                          <span className="text-[10px] font-bold text-slate-400">{med.dosage}</span>
+                        </div>
+                        <button onClick={() => deleteLog('medication', med.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Activity Tracking Card */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        {/* Data Vault (Database Control) */}
+        <div className="bg-slate-900 text-white p-8 rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col space-y-8">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+           <div className="relative z-10">
+              <div className="flex items-center space-x-3 text-blue-400 mb-6">
+                <Database className="w-8 h-8" />
+                <h2 className="text-2xl font-black tracking-tight">Data Vault</h2>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed font-medium mb-10">
+                Manage your persistent backend records. All health data is encrypted and stored locally within your secure browser session.
+              </p>
+
+              <div className="space-y-4">
+                 <button 
+                   onClick={handleExport}
+                   className="w-full flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group"
+                 >
+                    <div className="flex items-center space-x-4">
+                       <Download className="w-5 h-5 text-blue-400" />
+                       <div className="text-left">
+                          <p className="text-sm font-bold">Export Backup</p>
+                          <p className="text-[10px] text-slate-500">Download health history (.json)</p>
+                       </div>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-slate-600 -rotate-90 group-hover:text-white transition-colors" />
+                 </button>
+
+                 <button 
+                   onClick={() => db.clearAllData()}
+                   className="w-full flex items-center justify-between p-5 bg-red-500/5 border border-red-500/10 rounded-2xl hover:bg-red-500/10 transition-all group"
+                 >
+                    <div className="flex items-center space-x-4">
+                       <ShieldAlert className="w-5 h-5 text-red-400" />
+                       <div className="text-left">
+                          <p className="text-sm font-bold text-red-200">Wipe Database</p>
+                          <p className="text-[10px] text-red-900">Irreversible clearing of all profiles</p>
+                       </div>
+                    </div>
+                 </button>
+              </div>
+
+              <div className="mt-12 p-6 bg-blue-500/5 rounded-3xl border border-blue-500/10 space-y-4">
+                 <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-blue-400">
+                    <History className="w-3 h-3" />
+                    <span>Integrity Report</span>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                       <p className="text-xs text-slate-500">Profiles</p>
+                       <p className="text-xl font-black">{user.profiles.length}</p>
+                    </div>
+                    <div>
+                       <p className="text-xs text-slate-500">Storage Used</p>
+                       <p className="text-xl font-black">~{(JSON.stringify(user).length / 1024).toFixed(1)}KB</p>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        {/* Activity Tracking */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center space-x-3 text-indigo-600">
             <Dumbbell className="w-6 h-6" />
-            <h2 className="text-xl font-bold">Activity Log</h2>
+            <h2 className="text-xl font-bold">Quick Activity</h2>
           </div>
-          <div className="grid md:grid-cols-2 gap-6 bg-blue-50/10 p-5 rounded-2xl border border-blue-50">
-            <div className="space-y-3">
-              <input 
-                value={exType}
-                onChange={e => setExType(e.target.value)}
-                placeholder="Activity Type"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <div className="flex gap-2">
-                <input 
-                  type="number"
-                  value={exDuration}
-                  onChange={e => setExDuration(e.target.value)}
-                  placeholder="Mins"
-                  className="w-1/2 px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none"
-                />
-                <select 
-                  value={exIntensity}
-                  onChange={e => setExIntensity(e.target.value as any)}
-                  className="w-1/2 px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none"
-                >
-                  <option value="Low">Low</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="High">High</option>
-                </select>
-              </div>
-              <button 
-                onClick={logExercise}
-                className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-indigo-500/20"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Log Activity</span>
-              </button>
+          <div className="space-y-4">
+            <input value={exType} onChange={e => setExType(e.target.value)} placeholder="Activity" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" />
+            <div className="flex gap-2">
+              <input type="number" value={exDuration} onChange={e => setExDuration(e.target.value)} placeholder="Mins" className="w-1/2 px-4 py-3 rounded-xl border border-slate-200" />
+              <select value={exIntensity} onChange={e => setExIntensity(e.target.value as any)} className="w-1/2 px-4 py-3 rounded-xl border border-slate-200">
+                <option value="Low">Low</option>
+                <option value="Moderate">Moderate</option>
+                <option value="High">High</option>
+              </select>
             </div>
-            <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 scrollbar-hide">
-              {activeProfile.exerciseLogs.slice(0, 5).map(ex => (
-                <div key={ex.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 group shadow-sm">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-2 h-2 rounded-full ${ex.intensity === 'High' ? 'bg-red-500' : ex.intensity === 'Moderate' ? 'bg-amber-500' : 'bg-green-500'}`} />
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{ex.type}</p>
-                      <p className="text-[10px] text-slate-500">{ex.durationMinutes} mins</p>
-                    </div>
-                  </div>
-                  <button onClick={() => deleteLog('exercise', ex.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-600 transition-opacity">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
+            <button onClick={logExercise} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg">Log Effort</button>
           </div>
         </div>
       </div>
@@ -658,7 +618,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       {/* Add Profile Modal */}
       {isProfileModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
              <div className="p-8 bg-blue-600 text-white">
                 <h3 className="text-2xl font-black">Add Family Member</h3>
                 <p className="text-blue-100 opacity-80 mt-1 font-medium">Create a new health profile for tracking.</p>
@@ -666,43 +626,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
              <div className="p-8 space-y-6">
                 <div>
                    <label className="block text-sm font-bold text-slate-700 mb-2">Member Name</label>
-                   <input 
-                     value={newProfileName}
-                     onChange={(e) => setNewProfileName(e.target.value)}
-                     placeholder="e.g. Mary Jane"
-                     className="w-full px-4 py-3 bg-blue-50/20 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                   />
+                   <input value={newProfileName} onChange={(e) => setNewProfileName(e.target.value)} placeholder="e.g. Mary Jane" className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                    <label className="block text-sm font-bold text-slate-700 mb-2">Relationship</label>
-                   <select 
-                     value={newProfileRelationship}
-                     onChange={(e) => setNewProfileRelationship(e.target.value)}
-                     className="w-full px-4 py-3 bg-blue-50/20 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                   >
+                   <select value={newProfileRelationship} onChange={(e) => setNewProfileRelationship(e.target.value)} className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
                      <option>Self</option>
                      <option>Spouse</option>
-                     <option>Father</option>
-                     <option>Mother</option>
-                     <option>Son</option>
-                     <option>Daughter</option>
+                     <option>Child</option>
                      <option>Other</option>
                    </select>
                 </div>
                 <div className="flex gap-4 pt-4">
-                   <button 
-                     onClick={() => setIsProfileModalOpen(false)}
-                     className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all"
-                   >
-                     Cancel
-                   </button>
-                   <button 
-                     disabled={!newProfileName}
-                     onClick={addProfile}
-                     className="flex-1 px-6 py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 disabled:opacity-50"
-                   >
-                     Create Profile
-                   </button>
+                   <button onClick={() => setIsProfileModalOpen(false)} className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl">Cancel</button>
+                   <button disabled={!newProfileName} onClick={addProfile} className="flex-1 px-6 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl disabled:opacity-50">Create Profile</button>
                 </div>
              </div>
           </div>

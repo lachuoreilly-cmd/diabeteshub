@@ -12,7 +12,6 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<'connecting' | 'online'>('connecting');
@@ -36,7 +35,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       if (isLogin) {
         user = await db.login(email);
       } else {
-        user = await db.register(name, email);
+        // Derive a default name from the email prefix for initial profile setup
+        const registrationName = email.split('@')[0] || 'Member';
+        user = await db.register(registrationName, email);
       }
       onLogin(user);
       navigate('/assess');
@@ -86,15 +87,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             )}
 
             <div className="space-y-6">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Full Legal Name</label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input required type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClasses} placeholder="Jane Doe" />
-                  </div>
-                </div>
-              )}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Email Address</label>
                 <div className="relative">

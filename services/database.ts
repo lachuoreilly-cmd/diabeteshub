@@ -2,22 +2,28 @@
 import { User, Profile, DiabetesStatus, RiskLevel, AssessmentResult, GlucoseLog, MealLog } from '../types';
 
 /**
- * DATABASE SERVICE (MOCK BACKEND)
+ * DATABASE SERVICE (PERSISTENCE LAYER)
  * Simulates a real-world cloud database with asynchronous operations,
- * user indexing, and persistent storage using LocalStorage.
+ * indexing, and persistent browser storage.
  */
 
-const STORAGE_KEY = 'diabetes_hub_db';
-const SESSION_KEY = 'diabetes_hub_session';
+const STORAGE_KEY = 'diabetes_hub_v1_db';
+const SESSION_KEY = 'diabetes_hub_v1_session';
 
 class DatabaseService {
-  private async delay(ms: number = 800) {
+  private async delay(ms: number = 400) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private getAllUsers(): User[] {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      console.error("Database corruption detected. Resetting...", e);
+      return [];
+    }
   }
 
   private saveAllUsers(users: User[]) {
@@ -25,7 +31,7 @@ class DatabaseService {
   }
 
   /**
-   * SEEDING: Create a default demo user if the database is empty
+   * SEEDING: Ensures a demo environment exists on first launch.
    */
   public async seed() {
     const users = this.getAllUsers();
@@ -37,7 +43,6 @@ class DatabaseService {
         profiles: [this.generateMockProfile('Demo Patient')],
         activeProfileId: 'default'
       };
-      // We store a password in a real app, here we just simulate it
       this.saveAllUsers([demoUser]);
     }
   }
@@ -57,7 +62,6 @@ class DatabaseService {
           riskLevel: RiskLevel.MODERATE,
           risks: ["BMI of 27.4", "Glucose variability"],
           justification: "Your metabolic baseline is slightly elevated. Proactive monitoring is advised.",
-          // Added missing predictedHbA1c property
           predictedHbA1c: "5.9%",
           predictedGlucose: { fasting: "105 mg/dL", postprandial: "148 mg/dL" },
           actionPlan: {
@@ -97,7 +101,7 @@ class DatabaseService {
   }
 
   public async register(name: string, email: string): Promise<User> {
-    await this.delay(1200); // Simulate network latency
+    await this.delay(800);
     const users = this.getAllUsers();
     
     if (users.find(u => u.email === email)) {
@@ -119,12 +123,13 @@ class DatabaseService {
   }
 
   public async login(email: string): Promise<User> {
-    await this.delay(1000);
+    await this.delay(600);
     const users = this.getAllUsers();
     const user = users.find(u => u.email === email);
     
     if (!user) {
-      throw new Error("No account found with this email.");
+      // Improved error message to be more context-neutral
+      throw new Error("Account not found. Please register if you don't have an account yet.");
     }
 
     localStorage.setItem(SESSION_KEY, user.id);
@@ -144,6 +149,7 @@ class DatabaseService {
   }
 
   public async updateUser(user: User): Promise<User> {
+    await this.delay(200); // Simulate network sync
     const users = this.getAllUsers();
     const index = users.findIndex(u => u.id === user.id);
     if (index !== -1) {
@@ -151,6 +157,21 @@ class DatabaseService {
       this.saveAllUsers(users);
     }
     return user;
+  }
+
+  /**
+   * DATA VAULT OPERATIONS
+   */
+  public exportData(): string {
+    const users = this.getAllUsers();
+    const blob = new Blob([JSON.stringify(users, null, 2)], { type: 'application/json' });
+    return URL.createObjectURL(blob);
+  }
+
+  public async clearAllData() {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SESSION_KEY);
+    window.location.reload();
   }
 }
 

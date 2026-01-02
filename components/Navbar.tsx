@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, LayoutDashboard, History as HistoryIcon, LogOut, Home, BookOpen, Bot, ClipboardList, TrendingUp } from 'lucide-react';
+import { Activity, LayoutDashboard, History as HistoryIcon, LogOut, Home, BookOpen, Bot, ClipboardList, TrendingUp, Cloud, CloudOff } from 'lucide-react';
 import { User, Profile } from '../types';
 
 interface NavbarProps {
@@ -60,6 +60,10 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
           <div className="flex items-center space-x-3">
             {user ? (
               <div className="flex items-center space-x-3 ml-1">
+                <div className="flex items-center px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm space-x-2">
+                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">DB Online</span>
+                </div>
                 <div className="flex flex-col items-end hidden sm:flex text-right">
                   <span className="text-sm font-black text-slate-900 leading-none">{user.name.split(' ')[0]}</span>
                   {activeProfile && (

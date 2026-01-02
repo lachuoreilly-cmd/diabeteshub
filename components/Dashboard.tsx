@@ -6,7 +6,7 @@ import {
   Activity, Utensils, Pill, Dumbbell, 
   Plus, Loader2, Trash2, Sparkles, Lightbulb,
   TrendingUp, BarChart3, Users, ChevronDown, Check, UserPlus,
-  Droplets
+  Droplets, Heart, Brain, Zap, FlaskConical, ClipboardList
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
@@ -34,7 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
   // Medication Management State
   const [medName, setMedName] = useState('');
   const [medDosage, setMedDosage] = useState('');
-  const [medType, setMedType] = useState<'Diabetic' | 'Statin' | 'Insulin' | 'Other'>('Diabetic');
+  const [medType, setMedType] = useState<Medication['type']>('Diabetic');
 
   // Profile Management State
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -42,6 +42,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
   const [newProfileRelationship, setNewProfileRelationship] = useState('Spouse');
 
   const latestAssessment = activeProfile.history[0];
+
+  // Group medications for better visual grouping
+  const groupedMedications = useMemo(() => {
+    const groups: Record<string, Medication[]> = {};
+    activeProfile.currentMedications?.forEach(med => {
+      const type = med.type || 'Other';
+      if (!groups[type]) groups[type] = [];
+      groups[type].push(med);
+    });
+    return groups;
+  }, [activeProfile.currentMedications]);
 
   // Process nutritional data for trends (Daily Aggregation)
   const nutritionalTrendsData = useMemo(() => {
@@ -214,6 +225,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       </div>
     </div>
   );
+
+  const getMedCategoryStyles = (type: string) => {
+    switch (type) {
+      case 'Diabetic': return { color: 'text-blue-600', bg: 'bg-blue-50', icon: Zap };
+      case 'Insulin': return { color: 'text-red-600', bg: 'bg-red-50', icon: Droplets };
+      case 'Statin': return { color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Heart };
+      case 'BP': return { color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Activity };
+      case 'MentalHealth': return { color: 'text-purple-600', bg: 'bg-purple-50', icon: Brain };
+      case 'Hormonal': return { color: 'text-orange-600', bg: 'bg-orange-50', icon: FlaskConical };
+      default: return { color: 'text-slate-600', bg: 'bg-slate-50', icon: ClipboardList };
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-500 pb-20">
@@ -474,58 +497,100 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Medication Tracking Card */}
-        <div className="bg-white text-slate-900 p-6 rounded-3xl space-y-6 shadow-sm border border-slate-200">
-          <div className="flex items-center space-x-3 text-blue-600">
-            <Pill className="w-6 h-6" />
-            <h2 className="text-xl font-bold">Medications</h2>
+        {/* Medication Tracking Card - REDESIGNED */}
+        <div className="bg-white text-slate-900 p-6 rounded-[2.5rem] space-y-8 shadow-sm border border-slate-200 flex flex-col">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3 text-blue-600">
+              <Pill className="w-6 h-6" />
+              <h2 className="text-xl font-black tracking-tight">Medications</h2>
+            </div>
           </div>
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <input 
-                value={medName}
-                onChange={e => setMedName(e.target.value)}
-                placeholder="Name"
-                className="w-full px-4 py-2.5 bg-blue-50/20 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-blue-500 outline-none"
-              />
-              <div className="grid grid-cols-2 gap-2">
+          
+          <div className="space-y-6">
+            <div className="bg-blue-50/20 p-5 rounded-[2rem] border border-blue-100 space-y-4">
+              <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-1">Register New Medication</h3>
+              <div className="space-y-3">
                 <input 
-                  value={medDosage}
-                  onChange={e => setMedDosage(e.target.value)}
-                  placeholder="Dosage"
-                  className="px-4 py-2.5 bg-blue-50/20 border border-slate-200 rounded-xl text-sm outline-none"
+                  value={medName}
+                  onChange={e => setMedName(e.target.value)}
+                  placeholder="Medication Name"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none font-bold"
                 />
-                <select 
-                  value={medType}
-                  onChange={e => setMedType(e.target.value as any)}
-                  className="px-4 py-2.5 bg-blue-50/20 border border-slate-200 rounded-xl text-sm outline-none"
+                <div className="grid grid-cols-2 gap-3">
+                  <input 
+                    value={medDosage}
+                    onChange={e => setMedDosage(e.target.value)}
+                    placeholder="Dosage (e.g. 500mg)"
+                    className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-medium"
+                  />
+                  <select 
+                    value={medType}
+                    onChange={e => setMedType(e.target.value as any)}
+                    className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-bold text-slate-600"
+                  >
+                    <option value="Diabetic">Diabetic</option>
+                    <option value="Insulin">Insulin</option>
+                    <option value="Statin">Statin</option>
+                    <option value="BP">Blood Pressure</option>
+                    <option value="Hormonal">Hormonal</option>
+                    <option value="MentalHealth">Mental Health</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <button 
+                  onClick={addMedication}
+                  disabled={!medName}
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50"
                 >
-                  <option value="Diabetic">Diabetic</option>
-                  <option value="Insulin">Insulin</option>
-                  <option value="Statin">Statin</option>
-                  <option value="Other">Other</option>
-                </select>
+                  Confirm Addition
+                </button>
               </div>
-              <button 
-                onClick={addMedication}
-                className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10"
-              >
-                Add Medication
-              </button>
             </div>
 
-            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 scrollbar-hide">
-              {activeProfile.currentMedications?.map(med => (
-                <div key={med.id} className="p-3 bg-blue-50/20 rounded-xl flex items-center justify-between group border border-slate-100 shadow-sm">
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">{med.name} <span className="text-xs text-blue-600 font-normal ml-1">{med.dosage}</span></p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest">{med.type}</p>
-                  </div>
-                  <button onClick={() => deleteLog('medication', med.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-600 transition-opacity">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+            <div className="space-y-8 max-h-[450px] overflow-y-auto pr-2 scrollbar-hide flex-grow">
+              {Object.keys(groupedMedications).length > 0 ? (
+                Object.entries(groupedMedications).map(([type, meds]) => {
+                  const styles = getMedCategoryStyles(type);
+                  const Icon = styles.icon;
+                  return (
+                    <div key={type} className="space-y-3">
+                      <div className="flex items-center space-x-2 px-2">
+                        <Icon className={`w-3.5 h-3.5 ${styles.color}`} />
+                        <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${styles.color}`}>{type} Therapy</h4>
+                        <div className={`h-px flex-grow ${styles.bg}`}></div>
+                      </div>
+                      <div className="space-y-2">
+                        {meds.map(med => (
+                          <div key={med.id} className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between group hover:border-blue-200 hover:shadow-sm transition-all relative overflow-hidden">
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${styles.color.replace('text-', 'bg-')}`}></div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-slate-900">{med.name}</span>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black ${styles.bg} ${styles.color} uppercase tracking-tighter border border-current opacity-70`}>
+                                  {med.dosage}
+                                </span>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => deleteLog('medication', med.id)} 
+                              className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all transform hover:scale-110"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-12 text-center opacity-30 flex flex-col items-center space-y-4">
+                   <div className="p-4 bg-slate-100 rounded-full">
+                    <ClipboardList className="w-10 h-10 text-slate-400" />
+                   </div>
+                   <p className="text-xs font-black uppercase tracking-widest text-slate-400">Empty Pharmacy</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

@@ -6,8 +6,9 @@ import ResultsDashboard from './ResultsDashboard';
 import { 
   AlertCircle, ChevronRight, ChevronLeft, Loader2, Heart, Scale, Activity, 
   Pill, Utensils, Thermometer, Info, CheckCircle2, Users, Moon, Zap, 
-  Wine, Ban, ShieldCheck, ThermometerSnowflake, Waves, Sparkles, HelpCircle,
-  Brain, Stethoscope, Droplet, Dumbbell, Globe, ClipboardCheck
+  Wine, Ban, ShieldCheck, Waves, Sparkles, 
+  Brain, Stethoscope, Droplet, Dumbbell, Globe, ClipboardCheck,
+  UserCheck, Beaker, History
 } from 'lucide-react';
 
 interface DiagnosticFormProps {
@@ -112,7 +113,6 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
       case 'systolicBP': if (value < 70 || value > 250) return "70-250 mmHg"; break;
       case 'diastolicBP': if (value < 40 || value > 150) return "40-150 mmHg"; break;
       case 'hba1c': if (value && (value < 3 || value > 20)) return "3-20%"; break;
-      case 'sleep_hours_per_night': if (value < 0 || value > 24) return "0-24 hrs"; break;
     }
     return "";
   };
@@ -153,16 +153,6 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handleEquipmentToggle = (equipment: string) => {
-    setFormData(prev => {
-      const current = prev.homeEquipment;
-      const next = current.includes(equipment) 
-        ? current.filter(e => e !== equipment)
-        : [...current, equipment];
-      return { ...prev, homeEquipment: next };
-    });
-  };
-
   const isStepValid = () => {
     const stepErrors: ValidationErrors = {};
     if (step === 1) {
@@ -171,7 +161,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
         if (err) stepErrors[f] = err;
       });
     } else if (step === 2) {
-      ['systolicBP', 'diastolicBP'].forEach(f => {
+      ['systolicBP', 'diastolicBP', 'hba1c'].forEach(f => {
         const err = validateField(f, formData[f as keyof HealthData]);
         if (err) stepErrors[f] = err;
       });
@@ -182,7 +172,6 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Only proceed to analysis call if explicitly on the final confirm step and button clicked.
     if (step !== 5) return;
     
     setLoading(true);
@@ -209,60 +198,34 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     );
   }
 
-  const inputClasses = (name: string) => `w-full px-4 py-3 rounded-xl border bg-white text-slate-900 outline-none transition-all ${
-    touched[name] && errors[name] ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 focus:border-blue-500'
+  const inputClasses = (name: string) => `w-full px-4 py-3 rounded-xl border bg-white text-slate-900 outline-none transition-all font-semibold ${
+    errors[name] ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5'
   }`;
 
-  const MedInput = ({ cat, med, label, accentColor }: { cat: keyof HealthData['detailedMedications'], med: string, label: string, accentColor: string }) => {
-    const value = (formData.detailedMedications[cat] as any)[med];
-    const hasValue = value && value.length > 0;
-    const c = accentColor === 'blue' ? 'blue' : 'slate';
-
-    return (
-      <div className={`relative p-5 rounded-[1.5rem] border transition-all duration-300 overflow-hidden ${
-        hasValue 
-          ? `bg-white border-${c}-200 shadow-sm ring-1 ring-${c}-500/10` 
-          : 'bg-white border-slate-100 hover:border-slate-200'
-      }`}>
-        {hasValue && <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-${c}-600`} />}
-        <div className="flex items-center justify-between mb-2">
-          <label className={`text-[10px] font-black uppercase tracking-[0.15em] leading-none ${hasValue ? `text-${c}-700` : 'text-slate-400'}`}>
-            {label}
-          </label>
-        </div>
-        <div className="relative">
-          <input 
-            name={`detailedMedications.${cat}.${med}`}
-            value={value}
-            onChange={handleChange}
-            placeholder="Dose (e.g. 10mg daily)"
-            className={`w-full bg-white text-slate-900 px-4 py-3 text-sm border-b-2 rounded-xl outline-none transition-all font-bold placeholder:text-slate-300 ${
-              hasValue ? `border-${c}-600 bg-blue-50/20` : 'border-slate-50 focus:border-blue-400'
-            }`}
-          />
-        </div>
-      </div>
-    );
-  };
+  const Label = ({ text, sub }: { text: string, sub?: string }) => (
+    <div className="mb-2">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{text}</p>
+      {sub && <p className="text-[9px] text-slate-400 font-medium italic">{sub}</p>}
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 bg-white">
       <div className="bg-blue-50/30 rounded-[3rem] shadow-sm overflow-hidden border border-blue-100">
-        <div className="bg-white border-b border-blue-50 px-8 py-12 text-slate-900">
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+        {/* Header */}
+        <div className="bg-white border-b border-blue-50 px-8 py-10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="text-center md:text-left">
-              <h2 className="text-4xl font-black tracking-tight leading-none text-slate-900">Medical Intake</h2>
-              <p className="mt-2 text-slate-500 font-medium">Precision metabolic simulation based on provided clinical metrics.</p>
+              <h2 className="text-3xl font-black tracking-tight text-slate-900">Health Intake Engine</h2>
+              <p className="mt-1 text-slate-500 font-medium">Input clinical variables for HbA1c forecasting.</p>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex items-center space-x-3">
               {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="flex flex-col items-center space-y-2">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black transition-all ${
-                    step === i ? 'bg-blue-600 scale-110 shadow-lg shadow-blue-200 text-white' : 
-                    step > i ? 'bg-emerald-500 text-white' : 'bg-white border border-blue-100 text-blue-300'
-                  }`}>
-                    {step > i ? <CheckCircle2 className="w-5 h-5" /> : i}
-                  </div>
+                <div key={i} className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
+                  step === i ? 'bg-blue-600 text-white shadow-lg' : 
+                  step > i ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
+                }`}>
+                  {step > i ? <CheckCircle2 className="w-4 h-4" /> : i}
                 </div>
               ))}
             </div>
@@ -270,149 +233,257 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 lg:p-12">
+          {/* STEP 1: Biometrics & Anthropometrics */}
           {step === 1 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center space-x-3 text-blue-600">
-                <div className="p-3 bg-blue-100/50 rounded-2xl">
-                  <Globe className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-black uppercase text-sm tracking-widest leading-none">Demographics & Biometrics</h3>
-                </div>
+                <div className="p-2 bg-blue-100/50 rounded-lg"><Globe className="w-5 h-5" /></div>
+                <h3 className="font-black uppercase text-sm tracking-widest">Biometrics & Anthropometrics</h3>
               </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Age</label>
+                <div className="space-y-1">
+                  <Label text="Age" />
                   <input type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses('age')} />
+                  {errors.age && <p className="text-[10px] text-red-500 font-bold">{errors.age}</p>}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Biological Gender</label>
+                <div className="space-y-1">
+                  <Label text="Biological Gender" />
                   <select name="gender" value={formData.gender} onChange={handleChange} className={inputClasses('gender')}>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Weight (Lbs)</label>
+                <div className="space-y-1">
+                  <Label text="Ethnicity" sub="Affects genetic metabolic risk" />
+                  <select name="ethnicity" value={formData.ethnicity} onChange={handleChange} className={inputClasses('ethnicity')}>
+                    <option>Not specified</option>
+                    <option>White / Caucasian</option>
+                    <option>Black / African American</option>
+                    <option>Hispanic / Latino</option>
+                    <option>Asian</option>
+                    <option>South Asian</option>
+                    <option>Native American</option>
+                    <option>Pacific Islander</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label text="Weight (Lbs)" />
                   <input type="number" name="weightLbs" value={formData.weightLbs} onChange={handleChange} className={inputClasses('weightLbs')} />
                 </div>
+                <div className="space-y-1">
+                  <Label text="Height (Feet)" />
+                  <input type="number" name="heightFeet" value={formData.heightFeet} onChange={handleChange} className={inputClasses('heightFeet')} />
+                </div>
+                <div className="space-y-1">
+                  <Label text="Height (Inches)" />
+                  <input type="number" name="heightInches" value={formData.heightInches} onChange={handleChange} className={inputClasses('heightInches')} />
+                </div>
               </div>
             </div>
           )}
 
+          {/* STEP 2: Clinical Markers & Known Labs */}
           {step === 2 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-6">
-                <div className="p-5 bg-blue-600 rounded-[1.75rem] shadow-xl shadow-blue-100">
-                  <Pill className="w-9 h-9 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-black uppercase text-3xl tracking-tight leading-none text-slate-900">Clinical Data</h3>
-                  <p className="text-sm text-slate-500 font-medium mt-2">Latest lab markers and blood pressure readings.</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-1">
-                          <label className="text-[10px] font-black text-slate-400 uppercase">Systolic BP</label>
-                          <input type="number" name="systolicBP" value={formData.systolicBP} onChange={handleChange} className={inputClasses('systolicBP')} />
-                       </div>
-                       <div className="space-y-1">
-                          <label className="text-[10px] font-black text-slate-400 uppercase">Diastolic BP</label>
-                          <input type="number" name="diastolicBP" value={formData.diastolicBP} onChange={handleChange} className={inputClasses('diastolicBP')} />
-                       </div>
-                    </div>
-                 </div>
-                 <div className="space-y-4 bg-white p-6 rounded-3xl border border-blue-50">
-                    <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Common Medications</h4>
-                    <MedInput cat="diabetes" med="metformin" label="Metformin" accentColor="blue" />
-                 </div>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-3 text-blue-600">
-                <div className="p-3 bg-blue-50 rounded-2xl">
-                  <Waves className="w-6 h-6" />
-                </div>
-                <h3 className="font-black uppercase text-sm tracking-widest leading-none">Habits & Environment</h3>
-              </div>
-              <div className="grid md:grid-cols-2 gap-8">
-                 <div className="p-8 bg-white rounded-[3rem] border border-blue-50 shadow-sm space-y-6">
-                    <h4 className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Sleep Duration (Hrs)</h4>
-                    <input type="number" name="sleep_hours_per_night" value={formData.sleep_hours_per_night} onChange={handleChange} className={inputClasses('')} />
-                 </div>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-3 text-blue-600">
-                <div className="p-3 bg-blue-50 rounded-2xl">
-                  <Stethoscope className="w-6 h-6" />
-                </div>
-                <h3 className="font-black uppercase text-sm tracking-widest leading-none">Personal Planning</h3>
+            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-3 text-red-600">
+                <div className="p-2 bg-red-100/50 rounded-lg"><Beaker className="w-5 h-5" /></div>
+                <h3 className="font-black uppercase text-sm tracking-widest">Clinical Markers & Labs</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                 <div className="p-8 bg-white rounded-[3rem] border border-blue-50 shadow-sm">
-                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6">Dietary Preference</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                       {['Non-Veg', 'Vegetarian', 'Vegan', 'Keto', 'Paleo'].map(pref => (
-                         <button key={pref} type="button" onClick={() => setFormData(prev => ({ ...prev, dietPreference: pref as any }))} className={`px-4 py-3 rounded-2xl text-xs font-bold border transition-all ${formData.dietPreference === pref ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-100'}`}>
-                           {pref}
-                         </button>
-                       ))}
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label text="Systolic BP" sub="Upper Number" />
+                      <input type="number" name="systolicBP" value={formData.systolicBP} onChange={handleChange} className={inputClasses('systolicBP')} />
                     </div>
-                 </div>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
-              <div className="text-center space-y-8 py-10">
-                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                   <ClipboardCheck className="w-12 h-12 text-blue-600" />
+                    <div>
+                      <Label text="Diastolic BP" sub="Lower Number" />
+                      <input type="number" name="diastolicBP" value={formData.diastolicBP} onChange={handleChange} className={inputClasses('diastolicBP')} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label text="Family History" sub="T2D in first-degree relative?" />
+                    <div className="flex gap-4">
+                      {[true, false].map((val) => (
+                        <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-3 rounded-xl font-bold border transition-all ${formData.familyHistory === val ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-100'}`}>
+                          {val ? 'Yes' : 'No'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-4xl font-black text-slate-900 leading-tight">Ready for Generation</h3>
-                <p className="text-slate-500 font-medium max-w-lg mx-auto">
-                   Once you click the button below, our intelligence engine will calculate your biological risks and provide a forecasted HbA1c score.
-                </p>
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 text-blue-600 mb-2">
+                    <History className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Recent Lab Results</span>
+                  </div>
+                  <div>
+                    <Label text="Most Recent HbA1c (%)" sub="Leave blank if unknown" />
+                    <input type="number" step="0.1" name="hba1c" value={formData.hba1c} onChange={handleChange} placeholder="e.g. 5.7" className={inputClasses('hba1c')} />
+                  </div>
+                  <div>
+                    <Label text="Known Fasting Glucose" sub="mg/dL" />
+                    <input type="number" name="lastGlucose" value={formData.lastGlucose} onChange={handleChange} placeholder="e.g. 98" className={inputClasses('lastGlucose')} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          <div className="mt-16 flex flex-col sm:flex-row items-center justify-between border-t border-blue-50 pt-10 gap-6 sm:gap-4">
+          {/* STEP 3: Lifestyle Stressors */}
+          {step === 3 && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-3 text-indigo-600">
+                <div className="p-2 bg-indigo-100/50 rounded-lg"><Moon className="w-5 h-5" /></div>
+                <h3 className="font-black uppercase text-sm tracking-widest">Metabolic Stressors</h3>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div>
+                  <Label text="Sleep Duration" sub="Hours per night" />
+                  <input type="number" name="sleep_hours_per_night" value={formData.sleep_hours_per_night} onChange={handleChange} className={inputClasses('sleep_hours_per_night')} />
+                </div>
+                <div>
+                  <Label text="Stress Level" />
+                  <select name="stress_level" value={formData.stress_level} onChange={handleChange} className={inputClasses('stress_level')}>
+                    <option value="low">Low (Rarely stressed)</option>
+                    <option value="moderate">Moderate (Normal pressure)</option>
+                    <option value="high">High (Chronic/Intense)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label text="Smoking Status" />
+                  <select name="smoking_status" value={formData.smoking_status} onChange={handleChange} className={inputClasses('smoking_status')}>
+                    <option value="never">Never Smoked</option>
+                    <option value="former">Former Smoker</option>
+                    <option value="current">Current Smoker</option>
+                  </select>
+                </div>
+                <div>
+                  <Label text="Alcohol Consumption" />
+                  <select name="alcohol_consumption" value={formData.alcohol_consumption} onChange={handleChange} className={inputClasses('alcohol_consumption')}>
+                    <option value="none">None</option>
+                    <option value="occasional">Occasional (1-2 / month)</option>
+                    <option value="moderate">Moderate (1-2 / week)</option>
+                    <option value="heavy">Heavy (Daily+)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Nutrition & Activity */}
+          {step === 4 && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-3 text-green-600">
+                <div className="p-2 bg-green-100/50 rounded-lg"><Utensils className="w-5 h-5" /></div>
+                <h3 className="font-black uppercase text-sm tracking-widest">Nutrition & Physical Load</h3>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-8">
+                  <div>
+                    <Label text="Dietary Preference" />
+                    <div className="grid grid-cols-2 gap-3">
+                      {['Non-Veg', 'Vegetarian', 'Vegan', 'Keto', 'Paleo'].map(pref => (
+                        <button key={pref} type="button" onClick={() => setFormData({ ...formData, dietPreference: pref as any })} className={`px-4 py-3 rounded-xl text-xs font-bold border transition-all ${formData.dietPreference === pref ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-500 border-slate-100'}`}>
+                          {pref}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label text="Exercise Frequency" />
+                    <select name="exerciseFrequency" value={formData.exerciseFrequency} onChange={handleChange} className={inputClasses('exerciseFrequency')}>
+                      <option>Sedentary (No exercise)</option>
+                      <option>Rarely (1-2 times a month)</option>
+                      <option>1-2 times a week</option>
+                      <option>3-4 times a week</option>
+                      <option>Daily Athlete</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 text-amber-600 mb-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Nutritional Survey</span>
+                  </div>
+                  <div>
+                    <Label text="Sugary Drinks / Soda" />
+                    <select name="dietSurvey.sugaryDrinks" value={formData.dietSurvey.sugaryDrinks} onChange={handleChange} className={inputClasses('sugaryDrinks')}>
+                      <option>Rarely</option>
+                      <option>A few times a week</option>
+                      <option>Daily</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label text="Highly Processed Foods" sub="Fast food, packaged snacks" />
+                    <select name="dietSurvey.processedFoods" value={formData.dietSurvey.processedFoods} onChange={handleChange} className={inputClasses('processedFoods')}>
+                      <option>Rarely</option>
+                      <option>A few times a month</option>
+                      <option>A few times a week</option>
+                      <option>Daily</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label text="High Carb / Starch Frequency" sub="Bread, rice, pasta, potatoes" />
+                    <select name="dietSurvey.highCarbFrequency" value={formData.dietSurvey.highCarbFrequency} onChange={handleChange} className={inputClasses('highCarbFrequency')}>
+                      <option>Occasionally</option>
+                      <option>Once a day</option>
+                      <option>Every meal</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: Medication & Final Confirmation */}
+          {step === 5 && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-right-4">
+              <div className="flex items-center space-x-3 text-blue-600">
+                <div className="p-2 bg-blue-100/50 rounded-lg"><CheckCircle2 className="w-5 h-5" /></div>
+                <h3 className="font-black uppercase text-sm tracking-widest">Final Calculation</h3>
+              </div>
+              <div className="text-center py-10 space-y-8 bg-white rounded-[3rem] border border-blue-50 shadow-inner">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                   <ShieldCheck className="w-10 h-10 text-blue-600" />
+                </div>
+                <div className="max-w-lg mx-auto space-y-4 px-6">
+                  <h3 className="text-3xl font-black text-slate-900 leading-tight">Biometric Engine Locked</h3>
+                  <p className="text-slate-500 font-medium leading-relaxed">
+                    All metabolic indicators have been collected. Our system will now integrate your clinical history, habits, and genetic risk to forecast your current HbA1c and risk status.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="mt-16 flex flex-col sm:flex-row items-center justify-between border-t border-blue-50 pt-10 gap-6">
             {step > 1 ? (
-              <button type="button" onClick={() => setStep(step - 1)} className="flex items-center justify-center space-x-3 text-slate-400 font-black px-8 py-5 hover:bg-blue-50 rounded-[2rem] transition-all">
-                <ChevronLeft className="w-6 h-6" />
-                <span className="uppercase tracking-widest text-xs">Previous</span>
+              <button type="button" onClick={() => setStep(step - 1)} className="flex items-center space-x-2 text-slate-400 font-black px-8 py-4 hover:bg-slate-50 rounded-2xl transition-all">
+                <ChevronLeft className="w-5 h-5" />
+                <span className="uppercase tracking-widest text-[10px]">Previous</span>
               </button>
-            ) : <div className="hidden sm:block" />}
+            ) : <div />}
 
             <button
               type={step < 5 ? "button" : "submit"}
               onClick={step < 5 ? () => { if(isStepValid()) setStep(step + 1); } : undefined}
               disabled={loading}
-              className="flex items-center justify-center space-x-3 bg-blue-600 text-white px-12 py-5 rounded-[2rem] font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 disabled:opacity-50 min-w-[220px]"
+              className="w-full sm:w-auto flex items-center justify-center space-x-3 bg-blue-600 text-white px-12 py-5 rounded-[2rem] font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="uppercase tracking-widest text-xs">Analyzing Metrics...</span>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="uppercase tracking-widest text-xs">Simulating Outcomes...</span>
                 </>
               ) : (
                 <>
                   <span className="uppercase tracking-widest text-xs">
-                    {step < 5 ? "Next Step" : "Run Full Analysis"}
+                    {step < 5 ? "Continue" : "Generate Forecast"}
                   </span>
-                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+                  <ChevronRight className="w-5 h-5" />
                 </>
               )}
             </button>

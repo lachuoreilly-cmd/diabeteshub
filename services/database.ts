@@ -57,6 +57,8 @@ class DatabaseService {
           riskLevel: RiskLevel.MODERATE,
           risks: ["BMI of 27.4", "Glucose variability"],
           justification: "Your metabolic baseline is slightly elevated. Proactive monitoring is advised.",
+          // Added missing predictedHbA1c property
+          predictedHbA1c: "5.9%",
           predictedGlucose: { fasting: "105 mg/dL", postprandial: "148 mg/dL" },
           actionPlan: {
             dietPlan: "Focus on High Fiber, Low GI foods.",
@@ -88,6 +90,7 @@ class DatabaseService {
       exerciseLogs: [],
       myExercisePlans: [],
       exerciseSessions: [],
+      savedRecipes: [],
       hba1cHistory: [{ date: now.toISOString(), value: 5.7 }],
       currentMedications: []
     };

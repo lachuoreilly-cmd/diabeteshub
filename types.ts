@@ -38,6 +38,13 @@ export interface ExerciseLog {
   notes?: string;
 }
 
+export interface ExerciseStep {
+  name: string;
+  durationSeconds: number;
+  restSeconds: number;
+  type: 'exercise' | 'rest';
+}
+
 export interface ExercisePlan {
   id: string;
   name: string;
@@ -45,6 +52,8 @@ export interface ExercisePlan {
   durationMinutes: number;
   frequencyPerWeek: number;
   benefits: string;
+  equipmentNeeded: string[];
+  exercises: ExerciseStep[];
   weeklySchedule: {
     day: string;
     activity: string;
@@ -125,6 +134,9 @@ export interface DetailedMedications {
 export interface HealthData {
   age: number;
   gender: 'male' | 'female' | 'other';
+  ethnicity: string;
+  dietPreference: 'Non-Veg' | 'Vegetarian' | 'Vegan' | 'Keto' | 'Paleo';
+  homeEquipment: string[];
   systolicBP: number;
   diastolicBP: number;
   weightLbs: number;
@@ -176,6 +188,7 @@ export interface AssessmentResult {
   riskLevel: RiskLevel;
   risks: string[];
   justification: string;
+  predictedHbA1c: string;
   predictedGlucose: {
     fasting: string;
     postprandial: string;
@@ -193,16 +206,30 @@ export interface AssessmentResult {
   bmi: number;
 }
 
+export interface RecipeRecommendation {
+  name: string;
+  session: 'Breakfast' | 'Lunch' | 'Dinner';
+  cookingTime: string;
+  ingredients: string[];
+  instructions: string[];
+  nutrients: string;
+  reasoning: string;
+  youtubeSearchUrl: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
   relationship: string;
+  ethnicity?: string;
+  dietPreference?: string;
   history: AssessmentResult[];
   glucoseLogs: GlucoseLog[];
   mealLogs: MealLog[];
   exerciseLogs: ExerciseLog[];
   myExercisePlans: ExercisePlan[];
   exerciseSessions: ExerciseSession[];
+  savedRecipes: RecipeRecommendation[];
   hba1cHistory: { date: string, value: number }[];
   currentMedications: Medication[];
 }

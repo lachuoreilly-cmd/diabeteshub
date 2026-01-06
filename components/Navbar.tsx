@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, LayoutDashboard, History as HistoryIcon, LogOut, Home, BookOpen, Bot, ClipboardList, TrendingUp, Cloud, CloudOff } from 'lucide-react';
+import { Activity, LayoutDashboard, History as HistoryIcon, LogOut, Home, BookOpen, Bot, ClipboardList, TrendingUp, Cloud, CloudOff, Database } from 'lucide-react';
 import { User, Profile } from '../types';
+import { db } from '../services/database';
 
 interface NavbarProps {
   user: User | null;
@@ -12,6 +13,15 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
   const location = useLocation();
+  const [syncStatus, setSyncStatus] = useState<'cloud' | 'local'>('local');
+
+  useEffect(() => {
+    // Poll sync status from the service
+    const interval = setInterval(() => {
+      setSyncStatus(db.getConnectivityStatus());
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navLinks = [
     { path: '/', label: 'Home', icon: Home },
@@ -60,10 +70,23 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
           <div className="flex items-center space-x-3">
             {user ? (
               <div className="flex items-center space-x-3 ml-1">
-                <div className="flex items-center px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm space-x-2">
-                   <Cloud className="w-3 h-3 text-emerald-500" />
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">Sync Active</span>
+                {/* Dynamic Connection Indicator */}
+                <div className={`flex items-center px-3 py-1 bg-white border rounded-full shadow-sm space-x-2 ${
+                  syncStatus === 'cloud' ? 'border-emerald-100' : 'border-amber-100'
+                }`}>
+                   {syncStatus === 'cloud' ? (
+                     <>
+                       <Cloud className="w-3 h-3 text-emerald-500" />
+                       <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest hidden sm:inline">Cloud Active</span>
+                     </>
+                   ) : (
+                     <>
+                       <Database className="w-3 h-3 text-amber-500" />
+                       <span className="text-[8px] font-black text-amber-600 uppercase tracking-widest hidden sm:inline">Local Cache</span>
+                     </>
+                   )}
                 </div>
+
                 <div className="flex flex-col items-end hidden sm:flex text-right">
                   <span className="text-sm font-black text-slate-900 leading-none">{user.name.split(' ')[0]}</span>
                   {activeProfile && (

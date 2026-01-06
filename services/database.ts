@@ -1,181 +1,146 @@
 
-import { User, Profile, DiabetesStatus, RiskLevel, Medication } from '../types';
+import { User, Profile, DiabetesStatus, RiskLevel, AssessmentResult } from '../types';
 
 /**
- * DATABASE & API SERVICE
- * This service handles all communication with the health backend.
- * Currently simulates a cloud database with persistent storage.
- * To connect to a real server, simply update the fetch calls below.
+ * PRODUCTION HEALTH DATA SERVICE
+ * Interfaces with the Google Cloud Run API Backend.
  */
 
-const API_BASE_URL = '/api/v1'; // Placeholder for real backend
-const DB_NAME = 'diabetes_hub_prod_v1';
+const API_BASE_URL = window.location.origin.includes('localhost') 
+  ? 'http://localhost:8080/api/v1' 
+  : 'https://backend-service-cloudrun.a.run.app/api/v1'; // Update with your actual Cloud Run URL
+
 const SESSION_NAME = 'diabetes_hub_auth_token';
 
-class DatabaseService {
-  private async delay(ms: number = 500) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+class HealthDataService {
+  private connectivity: 'cloud' | 'local' = 'local';
+  private authToken: string | null = null;
+
+  constructor() {
+    this.authToken = localStorage.getItem(SESSION_NAME);
   }
 
-  // Simulated internal storage engine
-  private getStore(): User[] {
-    const data = localStorage.getItem(DB_NAME);
-    if (!data) return [];
-    try {
-      return JSON.parse(data);
-    } catch (e) {
-      console.error("API Sync Error: Data integrity check failed.");
-      return [];
-    }
-  }
-
-  private commit(users: User[]) {
-    localStorage.setItem(DB_NAME, JSON.stringify(users));
-  }
-
-  /**
-   * SEEDING: Initializes core system profiles if none exist.
-   */
-  public async seed() {
-    const users = this.getStore();
-    if (users.length === 0) {
-      const demoUser: User = {
-        id: 'u_demo_99',
-        email: 'demo@diabetes-hub.ai',
-        name: 'Demo Patient',
-        profiles: [this.createProfile('Demo Patient', true)],
-        activeProfileId: 'default'
-      };
-      this.commit([demoUser]);
-    }
-  }
-
-  private createProfile(userName: string, isDemo: boolean = false): Profile {
-    const now = new Date();
-    const day = 86400000;
-
-    return {
-      id: 'default',
-      name: userName,
-      relationship: 'Self',
-      history: isDemo ? [
-        {
-          id: 'as1',
-          date: new Date(now.getTime() - day * 2).toISOString(),
-          status: DiabetesStatus.PRE_DIABETIC,
-          riskLevel: RiskLevel.MODERATE,
-          risks: ["BMI of 27.4", "Glucose variability"],
-          justification: "Your metabolic baseline is slightly elevated. Proactive monitoring is advised.",
-          predictedHbA1c: "5.9%",
-          predictedGlucose: { fasting: "105 mg/dL", postprandial: "148 mg/dL" },
-          actionPlan: {
-            dietPlan: "Focus on High Fiber, Low GI foods.",
-            exercisePlan: "30 mins of moderate activity 4x per week.",
-            immediateNextSteps: ["Log daily glucose", "Walk after dinner"]
-          },
-          recommendations: { diet: [], exercise: [], lifestyle: [] },
-          bmi: 27.4
-        }
-      ] : [],
-      glucoseLogs: isDemo ? Array.from({ length: 14 }).map((_, i) => ({
-        id: `g${i}`,
-        timestamp: new Date(now.getTime() - (i * (day / 2))).toISOString(),
-        value: Math.floor(Math.random() * (130 - 90 + 1) + 90),
-        type: 'Fasting'
-      })) : [],
-      mealLogs: isDemo ? [
-        {
-          id: 'm1',
-          description: "Grilled Salmon & Quinoa",
-          timestamp: new Date().toISOString(),
-          type: 'Dinner',
-          analysis: {
-            calories: 450, carbs: 12, protein: 40, fat: 20, qualityScore: 98,
-            glycemicImpact: 'Low', suggestions: "Excellent choice for blood sugar management."
-          }
-        }
-      ] : [],
-      exerciseLogs: [],
-      myExercisePlans: [],
-      exerciseSessions: [],
-      savedRecipes: [],
-      hba1cHistory: isDemo ? [{ date: now.toISOString(), value: 5.7 }] : [],
-      currentMedications: []
+  private async request(endpoint: string, options: RequestInit = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(this.authToken ? { 'Authorization': `Bearer ${this.authToken}` } : {}),
+      ...options.headers,
     };
+
+    try {
+      const response = await fetch(url, { ...options, headers });
+      
+      if (response.status === 401) {
+        this.clearAuth();
+        throw new Error("Session expired. Please sign in again.");
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `API Error: ${response.status}`);
+      }
+
+      this.connectivity = 'cloud';
+      return await response.json();
+    } catch (error) {
+      console.warn(`Cloud backend unreachable at ${url}.`, error);
+      this.connectivity = 'local';
+      throw error; 
+    }
+  }
+
+  private clearAuth() {
+    localStorage.removeItem(SESSION_NAME);
+    this.authToken = null;
+    this.connectivity = 'local';
+  }
+
+  public getConnectivityStatus() {
+    return this.connectivity;
+  }
+
+  public async seed() {
+    if (this.authToken) {
+      try {
+        await this.getCurrentUser();
+      } catch (e) {
+        console.log("No cloud session active.");
+      }
+    }
   }
 
   public async register(name: string, email: string): Promise<User> {
-    await this.delay(800);
-    const users = this.getStore();
-    
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-      throw new Error("This email is already registered in our database.");
-    }
-
-    const newUser: User = {
-      id: `u_${Math.random().toString(36).substr(2, 9)}`,
-      name,
-      email: email.toLowerCase(),
-      profiles: [this.createProfile(name, false)],
-      activeProfileId: 'default'
-    };
-
-    users.push(newUser);
-    this.commit(users);
-    localStorage.setItem(SESSION_NAME, newUser.id);
-    return newUser;
+    const response = await this.request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email })
+    });
+    this.authToken = response.token;
+    localStorage.setItem(SESSION_NAME, response.token);
+    return response.user;
   }
 
   public async login(email: string): Promise<User> {
-    await this.delay(600);
-    const users = this.getStore();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (!user) {
-      throw new Error("The requested health record was not found in our system.");
-    }
-
-    localStorage.setItem(SESSION_NAME, user.id);
-    return user;
+    const response = await this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+    this.authToken = response.token;
+    localStorage.setItem(SESSION_NAME, response.token);
+    return response.user;
   }
 
   public async getCurrentUser(): Promise<User | null> {
     const sessionId = localStorage.getItem(SESSION_NAME);
     if (!sessionId) return null;
     
-    const users = this.getStore();
-    return users.find(u => u.id === sessionId) || null;
+    try {
+      const response = await this.request('/auth/me');
+      return response.user;
+    } catch (e) {
+      console.error("Cloud hydration failed:", e);
+      return null;
+    }
   }
 
   public async logout() {
-    localStorage.removeItem(SESSION_NAME);
+    this.clearAuth();
+    window.location.href = '#/';
+  }
+
+  public async saveAssessment(profileId: string, result: AssessmentResult): Promise<AssessmentResult> {
+    const response = await this.request(`/profiles/${profileId}/assessments`, {
+      method: 'POST',
+      body: JSON.stringify(result)
+    });
+    return response;
+  }
+
+  public async syncGlucoseLog(profileId: string, log: any) {
+    return await this.request(`/profiles/${profileId}/glucose`, {
+      method: 'POST',
+      body: JSON.stringify(log)
+    });
   }
 
   public async updateUser(user: User): Promise<User> {
-    await this.delay(200); // Simulate network latency
-    const users = this.getStore();
-    const index = users.findIndex(u => u.id === user.id);
-    if (index !== -1) {
-      users[index] = user;
-      this.commit(users);
-    }
-    return user;
+    const response = await this.request(`/users/${user.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(user)
+    });
+    return response.user;
   }
 
   public exportData(): string {
-    const users = this.getStore();
-    const blob = new Blob([JSON.stringify(users, null, 2)], { type: 'application/json' });
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(new Blob(["Cloud data export coming soon via API."], { type: 'text/plain' }));
   }
 
   public async clearAllData() {
-    if (window.confirm("WARNING: This will wipe all cloud data for this environment. Are you absolutely sure?")) {
-      localStorage.removeItem(DB_NAME);
-      localStorage.removeItem(SESSION_NAME);
-      window.location.href = '#/';
+    if (window.confirm("WARNING: This will wipe all session data. Proceed?")) {
+      this.clearAuth();
       window.location.reload();
     }
   }
 }
 
-export const db = new DatabaseService();
+export const db = new HealthDataService();

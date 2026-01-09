@@ -27,7 +27,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
     switch (status) {
       case DiabetesStatus.GOOD: return 'text-emerald-600 bg-emerald-50 border-emerald-200';
       case DiabetesStatus.PRE_DIABETIC: return 'text-amber-600 bg-amber-50 border-amber-200';
-      case DiabetesStatus.DIABETIC: return 'text-red-600 bg-red-50 border-red-200';
+      case DiabetesStatus.DIABETIC: return 'text-slate-700 bg-slate-50 border-slate-200';
     }
   };
 
@@ -35,7 +35,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
     switch (status) {
       case DiabetesStatus.GOOD: return '#10b981';
       case DiabetesStatus.PRE_DIABETIC: return '#f59e0b';
-      case DiabetesStatus.DIABETIC: return '#ef4444';
+      case DiabetesStatus.DIABETIC: return '#334155';
       default: return '#64748b';
     }
   };
@@ -127,7 +127,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
               <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#e2e8f0" strokeWidth="12" strokeLinecap="round" />
               <path d="M 20 100 A 80 80 0 0 1 73.3 33.3" fill="none" stroke="#10b981" strokeWidth="12" strokeLinecap="round" className={result.status === DiabetesStatus.GOOD ? "opacity-100" : "opacity-20"} />
               <path d="M 73.3 33.3 A 80 80 0 0 1 126.7 33.3" fill="none" stroke="#f59e0b" strokeWidth="12" strokeLinecap="round" className={result.status === DiabetesStatus.PRE_DIABETIC ? "opacity-100" : "opacity-20"} />
-              <path d="M 126.7 33.3 A 80 80 0 0 1 180 100" fill="none" stroke="#ef4444" strokeWidth="12" strokeLinecap="round" className={result.status === DiabetesStatus.DIABETIC ? "opacity-100" : "opacity-20"} />
+              <path d="M 126.7 33.3 A 80 80 0 0 1 180 100" fill="none" stroke="#334155" strokeWidth="12" strokeLinecap="round" className={result.status === DiabetesStatus.DIABETIC ? "opacity-100" : "opacity-20"} />
               <g style={{ transform: `rotate(${needleRotation}deg)`, transformOrigin: '100px 100px', transition: 'transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
                 <path d="M 97 100 L 100 25 L 103 100 Z" fill={getStatusHex(result.status)} />
               </g>

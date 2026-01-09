@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User, Profile, AssessmentResult, DiabetesStatus } from '../types';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Calendar, ChevronRight, Activity, Thermometer, Droplets, Clock, ArrowLeft, Search, Filter, Trash2, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { Calendar, ChevronRight, Activity, Thermometer, Droplets, Clock, ArrowLeft, Search, Filter, Trash2, TrendingDown, TrendingUp, Minus, AlertTriangle, X } from 'lucide-react';
 import ResultsDashboard from './ResultsDashboard';
 
 interface HistoryProps {
@@ -14,6 +14,10 @@ interface HistoryProps {
 const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentResult | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Delete Confirmation State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [assessmentToDeleteId, setAssessmentToDeleteId] = useState<string | null>(null);
 
   const filteredHistory = activeProfile.history.filter(h => 
     h.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -34,17 +38,24 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
 
   const getStatusBadge = (status: DiabetesStatus) => {
     switch (status) {
-      case DiabetesStatus.GOOD: return 'bg-green-100 text-green-700 border-green-200';
-      case DiabetesStatus.PRE_DIABETIC: return 'bg-amber-100 text-amber-700 border-amber-200';
-      case DiabetesStatus.DIABETIC: return 'bg-red-100 text-red-700 border-red-200';
+      case DiabetesStatus.GOOD: return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case DiabetesStatus.PRE_DIABETIC: return 'bg-amber-50 text-amber-700 border-amber-100';
+      case DiabetesStatus.DIABETIC: return 'bg-slate-50 text-slate-700 border-slate-100';
     }
   };
 
-  const handleDeleteAssessment = (e: React.MouseEvent, id: string) => {
+  const initiateDeleteAssessment = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this assessment record?')) {
-      onUpdate({ history: activeProfile.history.filter(h => h.id !== id) });
+    setAssessmentToDeleteId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDeleteAssessment = () => {
+    if (assessmentToDeleteId) {
+      onUpdate({ history: activeProfile.history.filter(h => h.id !== assessmentToDeleteId) });
     }
+    setIsDeleteModalOpen(false);
+    setAssessmentToDeleteId(null);
   };
 
   if (selectedAssessment) {
@@ -90,8 +101,8 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">BMI Trend</span>
             <div className="flex items-center space-x-2">
               <span className="text-2xl font-black text-slate-900">{activeProfile.history[0]?.bmi || '--'}</span>
-              {bmiTrend === 'down' && <TrendingDown className="w-5 h-5 text-green-500" />}
-              {bmiTrend === 'up' && <TrendingUp className="w-5 h-5 text-red-500" />}
+              {bmiTrend === 'down' && <TrendingDown className="w-5 h-5 text-emerald-500" />}
+              {bmiTrend === 'up' && <TrendingUp className="w-5 h-5 text-slate-500" />}
               {bmiTrend === 'stable' && <Minus className="w-5 h-5 text-slate-300" />}
             </div>
           </div>
@@ -103,7 +114,7 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
         <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-8">
             <h3 className="font-bold text-lg flex items-center text-slate-800">
-              <Droplets className="w-5 h-5 text-red-500 mr-2" />
+              <Droplets className="w-5 h-5 text-indigo-500 mr-2" />
               Blood Glucose Trends
             </h3>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Last 30 Readings</span>
@@ -114,8 +125,8 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
                 <AreaChart data={glucoseData}>
                   <defs>
                     <linearGradient id="colorGlucose" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -124,7 +135,7 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
                   <Tooltip 
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#ef4444" fillOpacity={1} fill="url(#colorGlucose)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="value" stroke="#6366f1" fillOpacity={1} fill="url(#colorGlucose)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -140,20 +151,20 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
 
         <div className="bg-slate-900 p-8 rounded-3xl text-white shadow-xl">
           <h3 className="font-bold text-lg mb-8 flex items-center">
-            <Thermometer className="w-5 h-5 text-blue-400 mr-2" />
+            <Thermometer className="w-5 h-5 text-indigo-400 mr-2" />
             HbA1c Milestones
           </h3>
           {activeProfile.hba1cHistory.length > 0 ? (
             <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
                {activeProfile.hba1cHistory.map((h, i) => (
-                 <div key={i} className="flex justify-between items-center p-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl hover:bg-slate-800 transition-colors">
+                 <div key={i} className="flex justify-between items-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors">
                    <div>
                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{new Date(h.date).toLocaleDateString()}</p>
                      <p className="text-2xl font-black text-white">{h.value}<span className="text-sm font-normal text-slate-500 ml-1">%</span></p>
                    </div>
                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                     h.value < 5.7 ? 'bg-green-500/20 text-green-400' :
-                     h.value < 6.5 ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+                     h.value < 5.7 ? 'bg-emerald-500/20 text-emerald-400' :
+                     h.value < 6.5 ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
                    }`}>
                      {h.value < 5.7 ? 'Normal' : h.value < 6.5 ? 'Prediabetic' : 'Diabetic'}
                    </div>
@@ -223,14 +234,14 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
                   <div className="hidden md:flex flex-col items-end">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Est. Risk</p>
                     <p className={`font-black ${
-                      assessment.riskLevel === 'Low' ? 'text-green-600' :
-                      assessment.riskLevel === 'Moderate' ? 'text-amber-600' : 'text-red-600'
+                      assessment.riskLevel === 'Low' ? 'text-emerald-600' :
+                      assessment.riskLevel === 'Moderate' ? 'text-amber-600' : 'text-slate-600'
                     }`}>{assessment.riskLevel}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button 
-                      onClick={(e) => handleDeleteAssessment(e, assessment.id)}
-                      className="p-2 text-slate-300 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                      onClick={(e) => initiateDeleteAssessment(e, assessment.id)}
+                      className="p-2 text-slate-300 hover:text-slate-900 transition-colors opacity-0 group-hover:opacity-100"
                       title="Delete Record"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -251,6 +262,41 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
           )}
         </div>
       </section>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 bg-slate-900 text-white">
+              <div className="flex items-center space-x-3 mb-2 text-indigo-400">
+                <AlertTriangle className="w-6 h-6" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Medical Data Removal</span>
+              </div>
+              <h3 className="text-2xl font-black">Verify Record Deletion</h3>
+            </div>
+            <div className="p-8 space-y-6">
+              <p className="text-slate-500 font-medium leading-relaxed">
+                Are you sure you want to permanently remove this diagnostic record? This action will impact your historical trend calculations and cannot be undone.
+              </p>
+              
+              <div className="flex gap-4 pt-2">
+                <button 
+                  onClick={() => setIsDeleteModalOpen(false)} 
+                  className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleConfirmDeleteAssessment} 
+                  className="flex-1 px-6 py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Secondary Metrics */}
       <div className="grid lg:grid-cols-2 gap-8">
@@ -282,7 +328,7 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
 
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-lg mb-8 flex items-center text-slate-800">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-600 mr-3" />
+            <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 mr-3" />
             Risk Categorization Timeline
           </h3>
           <div className="h-64">
@@ -295,7 +341,7 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={(val) => val === 1 ? 'Good' : val === 2 ? 'Pre-diabetic' : 'Diabetic'}
                 />
-                <Line type="stepAfter" dataKey="risk" stroke="#ef4444" strokeWidth={4} dot={{ r: 6, fill: '#ef4444', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8 }} />
+                <Line type="stepAfter" dataKey="risk" stroke="#6366f1" strokeWidth={4} dot={{ r: 6, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

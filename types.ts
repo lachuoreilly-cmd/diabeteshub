@@ -43,6 +43,7 @@ export interface ExerciseStep {
   durationSeconds: number;
   restSeconds: number;
   type: 'exercise' | 'rest';
+  visualUrl?: string; // High-quality simulation image or GIF
 }
 
 export interface ExercisePlan {

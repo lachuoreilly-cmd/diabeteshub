@@ -109,20 +109,20 @@ const Home: React.FC = () => {
 
             <div className="relative">
               <div className="absolute inset-0 bg-indigo-600/5 blur-[100px] rounded-full"></div>
-              <div className="relative bg-slate-50 rounded-[3.5rem] p-4 shadow-2xl border border-blue-100 aspect-square flex items-center justify-center group overflow-hidden">
+              <Link to="/education" className="relative bg-slate-50 rounded-[3.5rem] p-4 shadow-2xl border border-blue-100 aspect-square flex items-center justify-center group overflow-hidden block">
                 <div className="absolute inset-0 opacity-20 group-hover:scale-110 transition-transform duration-1000">
                   <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover" alt="Education" />
                 </div>
                 <div className="relative z-10 flex flex-col items-center text-slate-900 space-y-6">
                   <div className="w-24 h-24 bg-white/80 backdrop-blur-xl rounded-full flex items-center justify-center border border-blue-200 group-hover:scale-110 transition-transform shadow-xl">
-                    <Play className="w-10 h-10 fill-blue-600 text-blue-600" />
+                    <Microscope className="w-10 h-10 text-blue-600" />
                   </div>
                   <div className="text-center">
                     <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Featured Module</p>
                     <h4 className="text-2xl font-black mt-1">Metabolic Foundations</h4>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
         </div>
@@ -189,21 +189,6 @@ const Home: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Footer Medical Disclaimer */}
-      <section className="py-20 bg-white border-t border-blue-50">
-        <div className="max-w-4xl mx-auto px-4 text-center space-y-8">
-          <div className="inline-flex items-center space-x-2 text-red-600 bg-red-50 px-6 py-2 rounded-full border border-red-100">
-             <AlertTriangle className="w-5 h-5" />
-             <span className="font-black uppercase tracking-widest text-xs">Clinical Disclaimer</span>
-          </div>
-          <p className="text-slate-500 leading-relaxed font-medium text-sm">
-            Diabetes Hub is a simulation tool for educational purposes. 
-            All results and recommendations are generated through predictive models and 
-            <strong> do not substitute a professional medical diagnosis</strong>. 
-          </p>
         </div>
       </section>
     </div>

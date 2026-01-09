@@ -11,7 +11,9 @@ import Education from './components/Education';
 import HealthCoach from './components/HealthCoachAI';
 import ActionPlan from './components/ActionPlan';
 import LifestyleInsights from './components/LifestyleInsights';
+import VisualIntelligence from './components/VisualIntelligence';
 import AppTutorial from './components/AppTutorial';
+import BrandBanner from './components/BrandBanner';
 import { db } from './services/database';
 import { User, AssessmentResult, Profile, HealthData } from './types';
 
@@ -25,7 +27,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initSession = async () => {
-      await db.seed(); // Ensure demo user exists
+      await db.seed();
       const activeUser = await db.getCurrentUser();
       if (activeUser) {
         setUser(activeUser);
@@ -105,46 +107,53 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
-      <div className="min-h-screen flex flex-col bg-white transition-colors duration-300">
+      <div className="min-h-screen bg-white transition-colors duration-300 flex overflow-x-hidden">
         <Navbar 
           user={user} 
           activeProfile={activeProfile} 
           onLogout={handleLogout} 
         />
-        <AppTutorial />
-        <main className="flex-grow pt-16">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/education" element={<Education />} />
-            <Route path="/coach" element={<HealthCoach user={user} activeProfile={activeProfile} />} />
-            <Route path="/dashboard" element={user && activeProfile ? <Dashboard user={user} activeProfile={activeProfile} onUpdateUser={updateUser} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
-            <Route path="/action-plan" element={user && activeProfile ? <ActionPlan user={user} activeProfile={activeProfile} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
-            <Route path="/insights" element={user && activeProfile ? <LifestyleInsights activeProfile={activeProfile} /> : <Navigate to="/auth" />} />
-            <Route path="/assess" element={<DiagnosticForm user={user} activeProfile={activeProfile} onComplete={addResultToHistory} />} />
-            <Route path="/history" element={user && activeProfile ? <History user={user} activeProfile={activeProfile} onUpdate={updateActiveProfile} /> : <Navigate to="/auth" />} />
-            <Route path="/auth" element={<Auth onLogin={handleLogin} />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </main>
-        <footer className="bg-slate-50 text-slate-500 py-16 px-4 border-t border-slate-100">
-          <div className="max-w-6xl mx-auto text-center space-y-8">
-            <div className="flex justify-center space-x-12 opacity-60">
-               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cloud Database</span>
-               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">End-to-End Encryption</span>
-               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Privacy Compliant</span>
-            </div>
-            
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-blue-100 rounded-full shadow-sm">
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demo Login:</span>
-               <code className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">demo@diabetes-hub.ai</code>
-            </div>
+        
+        <div className="flex-grow flex flex-col lg:pl-72 transition-all duration-300">
+          <AppTutorial />
+          <BrandBanner />
 
-            <p className="text-sm font-bold text-slate-600">© 2024 Diabetes Hub. Your metabolic command center.</p>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-red-500 font-black max-w-2xl mx-auto leading-relaxed">
-              Medical Disclaimer: This application is for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always seek clinical advice from a professional.
-            </p>
-          </div>
-        </footer>
+          <main className="flex-grow pt-8 lg:pt-0">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/education" element={<Education />} />
+              <Route path="/coach" element={<HealthCoach user={user} activeProfile={activeProfile} />} />
+              <Route path="/dashboard" element={user && activeProfile ? <Dashboard user={user} activeProfile={activeProfile} onUpdateUser={updateUser} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
+              <Route path="/media-lab" element={user && activeProfile ? <VisualIntelligence /> : <Navigate to="/auth" />} />
+              <Route path="/action-plan" element={user && activeProfile ? <ActionPlan user={user} activeProfile={activeProfile} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
+              <Route path="/insights" element={user && activeProfile ? <LifestyleInsights activeProfile={activeProfile} /> : <Navigate to="/auth" />} />
+              <Route path="/assess" element={<DiagnosticForm user={user} activeProfile={activeProfile} onComplete={addResultToHistory} />} />
+              <Route path="/history" element={user && activeProfile ? <History user={user} activeProfile={activeProfile} onUpdate={updateActiveProfile} /> : <Navigate to="/auth" />} />
+              <Route path="/auth" element={<Auth onLogin={handleLogin} />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </main>
+          
+          <footer className="bg-slate-50 text-slate-500 py-16 px-4 border-t border-slate-100 mt-20">
+            <div className="max-w-6xl mx-auto text-center space-y-8">
+              <div className="flex justify-center space-x-12 opacity-60">
+                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cloud Database</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">End-to-End Encryption</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Privacy Compliant</span>
+              </div>
+              
+              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-blue-100 rounded-full shadow-sm">
+                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demo Login:</span>
+                 <code className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">demo@diabetes-companion.ai</code>
+              </div>
+
+              <p className="text-sm font-bold text-slate-600">© 2026 Diabetes Companion. Your metabolic command center.</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold max-w-2xl mx-auto leading-relaxed">
+                Medical Disclaimer: This application is for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always seek clinical advice from a professional.
+              </p>
+            </div>
+          </footer>
+        </div>
       </div>
     </HashRouter>
   );

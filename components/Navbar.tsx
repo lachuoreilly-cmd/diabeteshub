@@ -1,9 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, LayoutDashboard, History as HistoryIcon, LogOut, Home, BookOpen, Bot, ClipboardList, TrendingUp, Cloud, CloudOff, Database } from 'lucide-react';
+import { 
+  Activity, LayoutDashboard, History as HistoryIcon, LogOut, Home, 
+  BookOpen, Bot, ClipboardList, TrendingUp, Cloud, Menu, X, ChevronRight,
+  Settings, User as UserIcon, Wand2
+} from 'lucide-react';
 import { User, Profile } from '../types';
-import { db } from '../services/database';
+import Logo from './Logo';
 
 interface NavbarProps {
   user: User | null;
@@ -13,109 +17,134 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
   const location = useLocation();
-  const [syncStatus, setSyncStatus] = useState<'cloud' | 'local'>('local');
-
-  useEffect(() => {
-    // Poll sync status from the service
-    const interval = setInterval(() => {
-      setSyncStatus(db.getConnectivityStatus());
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navLinks = [
     { path: '/', label: 'Home', icon: Home },
-    { path: '/education', label: 'Learn', icon: BookOpen },
-    { path: '/coach', label: 'Coach', icon: Bot },
+    { path: '/education', label: 'Academy', icon: BookOpen },
+    { path: '/coach', label: 'AI Coach', icon: Bot },
     { path: '/assess', label: 'Assessment', icon: Activity },
   ];
 
   if (user) {
     navLinks.splice(1, 0, { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard });
-    navLinks.splice(2, 0, { path: '/action-plan', label: 'Plan', icon: ClipboardList });
-    navLinks.splice(3, 0, { path: '/insights', label: 'Insights', icon: TrendingUp });
-    navLinks.push({ path: '/history', label: 'History', icon: HistoryIcon });
+    navLinks.splice(2, 0, { path: '/media-lab', label: 'Media Lab', icon: Wand2 });
+    navLinks.splice(3, 0, { path: '/action-plan', label: 'Health Plan', icon: ClipboardList });
+    navLinks.splice(4, 0, { path: '/insights', label: 'Insights', icon: TrendingUp });
+    navLinks.push({ path: '/history', label: 'Records', icon: HistoryIcon });
   }
 
-  return (
-    <nav className="fixed top-0 w-full bg-blue-50/95 backdrop-blur-md border-b border-blue-100 z-50 transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700 text-nowrap tracking-tight">
-              Diabetes Hub
-            </span>
-          </Link>
+  const NavItem = ({ path, label, icon: Icon }: any) => {
+    const isActive = location.pathname === path;
+    return (
+      <Link
+        to={path}
+        onClick={() => setIsMobileMenuOpen(false)}
+        className={`group flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-200 ${
+          isActive 
+            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+            : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600'
+        }`}
+      >
+        <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+        <span className="text-sm font-bold tracking-tight">{label}</span>
+      </Link>
+    );
+  };
 
-          <div className="hidden lg:flex items-center space-x-1">
-            {navLinks.map(({ path, label, icon: Icon }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-[11px] font-black transition-all uppercase tracking-wider ${
-                  location.pathname === path 
-                    ? 'text-blue-700 bg-white shadow-sm ring-1 ring-blue-100' 
-                    : 'text-slate-500 hover:text-blue-600 hover:bg-blue-100/50'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{label}</span>
-              </Link>
-            ))}
+  return (
+    <>
+      <div className="lg:hidden fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-slate-100 z-[60] px-4 h-16 flex justify-between items-center">
+        <Link to="/" className="flex items-center space-x-2">
+          <Logo size={32} />
+          <span className="text-lg font-black tracking-tighter text-slate-900">Diabetes Companion</span>
+        </Link>
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 bg-slate-50 rounded-xl text-slate-600 border border-slate-100"
+        >
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </div>
+
+      <aside className={`fixed top-0 left-0 h-full bg-white border-r border-slate-100 z-[70] transition-all duration-300 lg:translate-x-0 ${
+        isMobileMenuOpen ? 'translate-x-0 w-full md:w-80' : '-translate-x-full w-72'
+      }`}>
+        <div className="flex flex-col h-full p-6">
+          <div className="hidden lg:flex items-center space-x-3 mb-12 px-2">
+            <Logo size={48} className="rotate-3" />
+            <div className="flex flex-col">
+              <span className="text-xl font-black text-slate-900 leading-[0.85] tracking-tighter">Diabetes <br/>Companion</span>
+              <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mt-1">Metabolic Core</span>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <nav className="flex-grow space-y-2 overflow-y-auto scrollbar-hide">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 mb-4">Main Navigation</p>
+            {navLinks.map((link) => (
+              <NavItem key={link.path} {...link} />
+            ))}
+          </nav>
+
+          <div className="mt-auto pt-6 border-t border-slate-50">
             {user ? (
-              <div className="flex items-center space-x-3 ml-1">
-                {/* Dynamic Connection Indicator */}
-                <div className={`flex items-center px-3 py-1 bg-white border rounded-full shadow-sm space-x-2 ${
-                  syncStatus === 'cloud' ? 'border-emerald-100' : 'border-amber-100'
-                }`}>
-                   {syncStatus === 'cloud' ? (
-                     <>
-                       <Cloud className="w-3 h-3 text-emerald-500" />
-                       <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest hidden sm:inline">Cloud Active</span>
-                     </>
-                   ) : (
-                     <>
-                       <Database className="w-3 h-3 text-amber-500" />
-                       <span className="text-[8px] font-black text-amber-600 uppercase tracking-widest hidden sm:inline">Local Cache</span>
-                     </>
-                   )}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100 mb-4">
+                   <div className="flex items-center space-x-2">
+                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                     <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Live Sync</span>
+                   </div>
+                   <Cloud className="w-3.5 h-3.5 text-emerald-400" />
                 </div>
 
-                <div className="flex flex-col items-end hidden sm:flex text-right">
-                  <span className="text-sm font-black text-slate-900 leading-none">{user.name.split(' ')[0]}</span>
-                  {activeProfile && (
-                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter leading-none mt-1">
-                      {activeProfile.name}
-                    </span>
-                  )}
+                <div className="flex items-center space-x-4 px-2">
+                  <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center border border-blue-200 relative overflow-hidden">
+                    {activeProfile ? (
+                      <span className="text-xl font-black text-blue-700">{activeProfile.name.charAt(0)}</span>
+                    ) : (
+                      <UserIcon className="w-6 h-6 text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex-grow min-0">
+                    <p className="text-sm font-black text-slate-900 truncate">{user.name}</p>
+                    <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-tight">
+                      {activeProfile?.relationship || 'Active Account'}
+                    </p>
+                  </div>
                 </div>
-                <div className="h-8 w-[1px] bg-blue-100 mx-2 hidden sm:block"></div>
+
                 <button
                   onClick={onLogout}
-                  className="p-2.5 bg-white border border-red-50 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"
-                  title="Logout"
+                  className="w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded-2xl border border-slate-100 transition-all group"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <div className="flex items-center space-x-3">
+                    <LogOut className="w-4 h-4" />
+                    <span className="text-xs font-black uppercase tracking-widest">Terminate Session</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </button>
               </div>
             ) : (
               <Link
                 to="/auth"
-                className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center space-x-3 py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95"
               >
-                Sign In
+                <span>Sign In</span>
+                <ChevronRight className="w-4 h-4" />
               </Link>
             )}
           </div>
         </div>
-      </div>
-    </nav>
+      </aside>
+
+      {isMobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[65]"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

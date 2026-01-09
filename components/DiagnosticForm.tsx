@@ -173,15 +173,25 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step !== 5) return;
+
+    const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+    if (!hasKey) {
+      await (window as any).aistudio.openSelectKey();
+    }
     
     setLoading(true);
     try {
       const assessment = await analyzeHealthData(formData);
       setResult(assessment);
       onComplete(assessment, formData);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Analysis failed. Please try again.");
+      if (error?.message?.includes("Requested entity was not found.")) {
+         alert("API Key error. Please select a valid key from a paid project (ai.google.dev/gemini-api/docs/billing).");
+         await (window as any).aistudio.openSelectKey();
+      } else {
+         alert("Analysis failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -199,7 +209,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   }
 
   const inputClasses = (name: string, fontSize: 'text-xl' | 'text-base' = 'text-xl') => `w-full px-5 py-4 rounded-xl border bg-white text-slate-900 outline-none transition-all font-bold ${fontSize} ${
-    errors[name] ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5'
+    errors[name] ? 'border-slate-800 ring-2 ring-slate-800/10' : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5'
   }`;
 
   const Label = ({ text, sub }: { text: string, sub?: string }) => (
@@ -244,7 +254,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                 <div className="space-y-1">
                   <Label text="Age" />
                   <input type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses('age')} />
-                  {errors.age && <p className="text-sm text-red-500 font-bold mt-2">{errors.age}</p>}
+                  {errors.age && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.age}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Biological Gender" />
@@ -270,7 +280,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                 <div className="space-y-1">
                   <Label text="Weight (Lbs)" />
                   <input type="number" name="weightLbs" value={formData.weightLbs} onChange={handleChange} className={inputClasses('weightLbs')} />
-                  {errors.weightLbs && <p className="text-sm text-red-500 font-bold mt-2">{errors.weightLbs}</p>}
+                  {errors.weightLbs && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.weightLbs}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Height (Feet)" />
@@ -287,8 +297,8 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
           {/* STEP 2: Clinical Markers & Known Labs */}
           {step === 2 && (
             <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-4 text-red-600">
-                <div className="p-3 bg-red-100/50 rounded-2xl"><Beaker className="w-6 h-6" /></div>
+              <div className="flex items-center space-x-4 text-indigo-700">
+                <div className="p-3 bg-indigo-50 rounded-2xl"><Beaker className="w-6 h-6" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Clinical Markers & Labs</h3>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
@@ -297,19 +307,19 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     <div>
                       <Label text="Systolic BP" sub="Upper Number" />
                       <input type="number" name="systolicBP" value={formData.systolicBP} onChange={handleChange} className={inputClasses('systolicBP')} />
-                      {errors.systolicBP && <p className="text-sm text-red-500 font-bold mt-2">{errors.systolicBP}</p>}
+                      {errors.systolicBP && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.systolicBP}</p>}
                     </div>
                     <div>
                       <Label text="Diastolic BP" sub="Lower Number" />
                       <input type="number" name="diastolicBP" value={formData.diastolicBP} onChange={handleChange} className={inputClasses('diastolicBP')} />
-                      {errors.diastolicBP && <p className="text-sm text-red-500 font-bold mt-2">{errors.diastolicBP}</p>}
+                      {errors.diastolicBP && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.diastolicBP}</p>}
                     </div>
                   </div>
                   <div>
                     <Label text="Family History" sub="T2D in first-degree relative?" />
                     <div className="flex gap-4">
                       {[true, false].map((val) => (
-                        <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-5 rounded-2xl font-black text-lg border transition-all ${formData.familyHistory === val ? 'bg-red-600 text-white border-red-600 shadow-lg shadow-red-100' : 'bg-white text-slate-500 border-slate-200 hover:border-red-200'}`}>
+                        <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-5 rounded-2xl font-black text-lg border transition-all ${formData.familyHistory === val ? 'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-100' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
                           {val ? 'Yes' : 'No'}
                         </button>
                       ))}
@@ -317,14 +327,14 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   </div>
                 </div>
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-100 space-y-8 shadow-sm">
-                  <div className="flex items-center space-x-3 text-blue-600 mb-2">
+                  <div className="flex items-center space-x-3 text-indigo-600 mb-2">
                     <History className="w-5 h-5" />
                     <span className="text-xs font-black uppercase tracking-widest">Recent Lab Diagnostics</span>
                   </div>
                   <div>
                     <Label text="Latest HbA1c (%)" sub="Leave blank if unknown" />
                     <input type="number" step="0.1" name="hba1c" value={formData.hba1c} onChange={handleChange} placeholder="e.g. 5.7" className={inputClasses('hba1c')} />
-                    {errors.hba1c && <p className="text-sm text-red-500 font-bold mt-2">{errors.hba1c}</p>}
+                    {errors.hba1c && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.hba1c}</p>}
                   </div>
                   <div>
                     <Label text="Fasting Glucose" sub="mg/dL" />
@@ -385,8 +395,8 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
           {/* STEP 4: Nutrition & Activity */}
           {step === 4 && (
             <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center space-x-4 text-green-600">
-                <div className="p-3 bg-green-100/50 rounded-2xl"><Utensils className="w-6 h-6" /></div>
+              <div className="flex items-center space-x-4 text-emerald-700">
+                <div className="p-3 bg-emerald-50 rounded-2xl"><Utensils className="w-6 h-6" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Nutrition & Physical Load</h3>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
@@ -395,7 +405,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     <Label text="Dietary Preference" />
                     <div className="grid grid-cols-2 gap-4">
                       {['Non-Veg', 'Vegetarian', 'Vegan', 'Keto', 'Paleo'].map(pref => (
-                        <button key={pref} type="button" onClick={() => setFormData({ ...formData, dietPreference: pref as any })} className={`px-5 py-4 rounded-2xl text-sm font-black border transition-all ${formData.dietPreference === pref ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-100' : 'bg-white text-slate-500 border-slate-200 hover:border-green-200'}`}>
+                        <button key={pref} type="button" onClick={() => setFormData({ ...formData, dietPreference: pref as any })} className={`px-5 py-4 rounded-2xl text-sm font-black border transition-all ${formData.dietPreference === pref ? 'bg-emerald-700 text-white border-emerald-700 shadow-lg shadow-emerald-100' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-200'}`}>
                           {pref}
                         </button>
                       ))}
@@ -413,7 +423,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   </div>
                 </div>
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-100 space-y-8 shadow-sm">
-                  <div className="flex items-center space-x-3 text-amber-600 mb-2">
+                  <div className="flex items-center space-x-3 text-slate-700 mb-2">
                     <Sparkles className="w-5 h-5" />
                     <span className="text-xs font-black uppercase tracking-widest">Nutritional Survey</span>
                   </div>
@@ -451,7 +461,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
           {step === 5 && (
             <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center space-x-4 text-blue-600">
-                <div className="p-3 bg-blue-100/50 rounded-2xl"><CheckCircle2 className="w-6 h-6" /></div>
+                <div className="p-3 bg-blue-100/50 rounded-2xl"><CheckCircle2 className="w-5 h-5" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Final Calculation</h3>
               </div>
               <div className="text-center py-16 space-y-10 bg-white rounded-[4rem] border border-blue-50 shadow-inner">

@@ -1,31 +1,25 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   BookOpen, Activity, Zap, ShieldCheck, HeartPulse, Apple, Dumbbell, 
   Droplets, HelpCircle, ChevronDown, ChevronUp, Info, Microscope, 
   Target, Play, CheckCircle2, AlertCircle, XCircle, Star, Sparkles, 
   ArrowRight, Award, Coffee, Carrot, ChevronRight, TrendingUp, X,
-  Search, ExternalLink, Loader2, Scale
+  Search, ExternalLink, Loader2, Scale, Youtube, Video, Copy, Maximize2,
+  AlertTriangle, FileText
 } from 'lucide-react';
-import { getFoodGIInfo } from '../services/geminiService';
+import { getFoodGIInfo, findEducationalVideos } from '../services/geminiService';
 
 const Education: React.FC = () => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
 
-  useEffect(() => {
-    if (selectedVideoId) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [selectedVideoId]);
+  // AI Video Discovery State
+  const [videoQuery, setVideoQuery] = useState('');
+  const [isFindingVideos, setIsFindingVideos] = useState(false);
+  const [videoResults, setVideoResults] = useState<any>(null);
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -45,32 +39,19 @@ const Education: React.FC = () => {
     }
   };
 
-  const educationalVideos = [
-    {
-      id: 'wZAjVQWbMlE',
-      title: 'Diabetes Mellitus Explained',
-      duration: '5:02',
-      thumbnail: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=800',
-      category: 'Biology',
-      desc: 'A comprehensive visual explanation of how diabetes affects the body\'s glucose regulation system.'
-    },
-    {
-      id: 'O1zHe-D483U',
-      title: 'Mastering the Glycemic Index',
-      duration: '4:15',
-      thumbnail: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&q=80&w=800',
-      category: 'Nutrition',
-      desc: 'Learn how to identify and choose low-GI foods to maintain stable blood sugar levels throughout the day.'
-    },
-    {
-      id: 'm9G9Yp8X1YI',
-      title: 'Exercise & Insulin Sensitivity',
-      duration: '6:32',
-      thumbnail: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=800',
-      category: 'Lifestyle',
-      desc: 'Understand the biological connection between physical activity and your body\'s ability to process glucose.'
+  const handleFindVideos = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!videoQuery.trim()) return;
+    setIsFindingVideos(true);
+    try {
+      const result = await findEducationalVideos(videoQuery);
+      setVideoResults(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsFindingVideos(false);
     }
-  ];
+  };
 
   const faqs = [
     {
@@ -110,10 +91,92 @@ const Education: React.FC = () => {
             <span className="text-blue-200">Your Primary Defense.</span>
           </h1>
           <p className="text-xl text-blue-50 font-medium leading-relaxed mb-10 max-w-2xl mx-auto">
-            Unlock the science of your metabolism with our evidence-based video library and metabolic food explorer.
+            Unlock the science of your metabolism with our evidence-based clinical discovery tools and metabolic food explorer.
           </p>
         </div>
       </header>
+
+      {/* AI Video Discovery SECTION */}
+      <section className="max-w-7xl mx-auto px-4">
+        <div className="bg-slate-900 rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border border-white/10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+          
+          <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <div className="inline-flex items-center space-x-3 text-blue-400 font-black uppercase text-xs tracking-[0.2em]">
+                <Video className="w-5 h-5" />
+                <span>AI Knowledge Discovery</span>
+              </div>
+              <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight">
+                Discover Specialized <br />Clinical Insights.
+              </h2>
+              <p className="text-lg text-slate-400 font-medium leading-relaxed">
+                Our AI scans the web for the most accurate educational content, prioritizing top-tier US institutions like the American Diabetes Association (ADA), CDC, and Cleveland Clinic.
+              </p>
+
+              <form onSubmit={handleFindVideos} className="relative group">
+                <input 
+                  type="text"
+                  value={videoQuery}
+                  onChange={(e) => setVideoQuery(e.target.value)}
+                  placeholder="e.g., 'A1c explained', 'keto for diabetes'..."
+                  className="w-full pl-14 pr-32 py-5 bg-white/5 border-2 border-white/10 rounded-[2rem] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-lg text-white placeholder:text-slate-500"
+                />
+                <Youtube className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-red-500 transition-colors w-6 h-6" />
+                <button 
+                  disabled={isFindingVideos}
+                  className="absolute right-2 top-2 bottom-2 px-8 bg-blue-600 text-white rounded-[1.75rem] font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50"
+                >
+                  {isFindingVideos ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Discover'}
+                </button>
+              </form>
+            </div>
+
+            <div className="min-h-[400px]">
+              {videoResults ? (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+                  <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
+                     <p className="text-sm font-medium text-slate-300 italic mb-4">"{videoResults.text.split('\n')[0]}"</p>
+                     <div className="space-y-4">
+                        {videoResults.sources.map((source: any, idx: number) => {
+                          const isYoutube = source.web?.uri?.includes('youtube.com') || source.web?.uri?.includes('youtu.be');
+                          return source.web && (
+                            <a 
+                              key={idx} 
+                              href={source.web.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group p-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all flex items-center justify-between"
+                            >
+                              <div className="flex-grow pr-4">
+                                <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{source.web.title || 'Educational Resource'}</h4>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                                  {isYoutube ? 'Watch on YouTube' : 'Read Full Article'}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className={`shrink-0 p-3 rounded-xl group-hover:scale-110 transition-transform shadow-lg ${isYoutube ? 'bg-red-600 shadow-red-500/20' : 'bg-blue-600 shadow-blue-500/20'}`}>
+                                  {isYoutube ? <Play className="w-5 h-5 text-white fill-white" /> : <FileText className="w-5 h-5 text-white" />}
+                                </div>
+                              </div>
+                            </a>
+                          );
+                        })}
+                     </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30 border-2 border-dashed border-white/10 rounded-[3rem] p-12">
+                   <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
+                      <Microscope className="w-10 h-10" />
+                   </div>
+                   <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Discovering Science...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Metabolic Food Explorer SECTION */}
       <section className="max-w-7xl mx-auto px-4 relative">
@@ -247,86 +310,6 @@ const Education: React.FC = () => {
           </div>
         </div>
       </section>
-
-      {/* Video Academy Grid */}
-      <section className="max-w-7xl mx-auto px-4 space-y-12">
-        <div className="max-w-xl">
-           <div className="inline-flex items-center space-x-2 text-blue-600 font-black uppercase text-[10px] tracking-widest mb-2">
-              <Play className="w-4 h-4" />
-              <span>Watch & Learn</span>
-           </div>
-           <h2 className="text-4xl font-black text-slate-900 tracking-tight">Interactive Lessons</h2>
-           <p className="text-slate-500 font-medium mt-4">Simple, powerful lessons designed to make complex concepts easy to digest.</p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {educationalVideos.map(video => (
-            <div 
-              key={video.id} 
-              className="group cursor-pointer bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden hover:shadow-2xl hover:border-blue-200 transition-all duration-500 flex flex-col"
-              onClick={() => setSelectedVideoId(video.id)}
-            >
-              <div className="relative aspect-video overflow-hidden bg-slate-100">
-                <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
-                <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/5 transition-all flex items-center justify-center">
-                   <div className="w-16 h-16 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl border border-blue-100">
-                      <Play className="w-6 h-6 text-blue-600 fill-blue-600" />
-                   </div>
-                </div>
-                <div className="absolute top-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur text-[9px] font-black uppercase tracking-widest text-slate-900 rounded-lg border border-slate-100">
-                  {video.category}
-                </div>
-              </div>
-              <div className="p-8 flex-grow space-y-4">
-                <h3 className="text-xl font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">{video.title}</h3>
-                <p className="text-sm text-slate-500 font-medium leading-relaxed line-clamp-2">{video.desc}</p>
-                <div className="pt-2">
-                   <button className="flex items-center space-x-2 text-blue-600 font-black uppercase text-[10px] tracking-widest group/btn">
-                      <span>Launch Video Lesson</span>
-                      <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                   </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Video Modal Player */}
-      {selectedVideoId && (
-        <div 
-          className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-300"
-          onClick={() => setSelectedVideoId(null)}
-        >
-           <div 
-             className="relative w-full max-w-5xl aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10"
-             onClick={(e) => e.stopPropagation()}
-           >
-              <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/80 to-transparent z-[10001] flex justify-between items-center opacity-0 hover:opacity-100 transition-opacity">
-                <h4 className="text-white font-bold text-lg px-4">Academy Lesson</h4>
-                <button 
-                  onClick={() => setSelectedVideoId(null)}
-                  className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-md border border-white/10"
-                >
-                   <X className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="w-full h-full bg-slate-900 flex items-center justify-center">
-                <iframe 
-                  width="100%" 
-                  height="100%" 
-                  src={`https://www.youtube-nocookie.com/embed/${selectedVideoId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`} 
-                  title="Academy Video Lesson" 
-                  frameBorder="0" 
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                  allowFullScreen
-                  className="w-full h-full"
-                ></iframe>
-              </div>
-           </div>
-        </div>
-      )}
 
       {/* Expert Q&A Accordion */}
       <section className="bg-blue-50/30 py-24 transition-colors">

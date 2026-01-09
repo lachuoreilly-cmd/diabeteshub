@@ -9,7 +9,7 @@ import {
   TrendingUp, BarChart3, Users, ChevronDown, Check, UserPlus,
   Droplets, Heart, Brain, Zap, FlaskConical, ClipboardList,
   Database, Download, ShieldAlert, CheckCircle2, History,
-  Edit3
+  Edit3, X, AlertTriangle, AlertCircle
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
@@ -49,6 +49,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
   const [renamingProfileId, setRenamingProfileId] = useState<string | null>(null);
   const [renamingProfileName, setRenamingProfileName] = useState('');
 
+  // Delete Profile State (Custom Modal)
+  const [isDeleteProfileModalOpen, setIsDeleteProfileModalOpen] = useState(false);
+  const [profileToDeleteId, setProfileToDeleteId] = useState<string | null>(null);
+  const [deleteProfileError, setDeleteProfileError] = useState<string | null>(null);
+
+  // Purge Vault State (Custom Modal)
+  const [isPurgeVaultModalOpen, setIsPurgeVaultModalOpen] = useState(false);
+
   // Persistence State
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
@@ -67,26 +75,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
     });
     return groups;
   }, [activeProfile.currentMedications]);
-
-  const nutritionalTrendsData = useMemo(() => {
-    const dailyData: Record<string, { date: string, calories: number, carbs: number, protein: number, fat: number }> = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().split('T')[0];
-      dailyData[key] = { date: d.toLocaleDateString([], { weekday: 'short' }), calories: 0, carbs: 0, protein: 0, fat: 0 };
-    }
-    activeProfile.mealLogs.forEach(log => {
-      const key = log.timestamp.split('T')[0];
-      if (dailyData[key] && log.analysis) {
-        dailyData[key].calories += log.analysis.calories;
-        dailyData[key].carbs += log.analysis.carbs;
-        dailyData[key].protein += log.analysis.protein;
-        dailyData[key].fat += log.analysis.fat;
-      }
-    });
-    return Object.values(dailyData);
-  }, [activeProfile.mealLogs]);
 
   const logGlucose = () => {
     if (!glucoseVal) return;
@@ -115,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       onUpdateProfile({ mealLogs: [newMeal, ...(activeProfile.mealLogs || [])] });
       setMealText('');
     } catch (e) {
-      alert("Failed to analyze meal. Please try again.");
+      console.error(e);
     } finally {
       setAnalyzingMeal(false);
     }
@@ -204,19 +192,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
     onUpdateUser({ activeProfileId: id });
   };
 
-  const deleteProfile = (e: React.MouseEvent, id: string) => {
+  const initiateDeleteProfile = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    e.preventDefault();
     if (user.profiles.length <= 1) {
-      alert("You must have at least one profile.");
-      return;
+      setDeleteProfileError("Profile Management Rule: At least one identity record must exist in the vault.");
+      setProfileToDeleteId(null);
+    } else {
+      setDeleteProfileError(null);
+      setProfileToDeleteId(id);
     }
-    if (window.confirm("Delete this profile and all its historical data?")) {
-      const remaining = user.profiles.filter(p => p.id !== id);
-      onUpdateUser({ 
-        profiles: remaining,
-        activeProfileId: id === user.activeProfileId ? remaining[0].id : user.activeProfileId
-      });
-    }
+    setIsDeleteProfileModalOpen(true);
+  };
+
+  const handleConfirmDeleteProfile = () => {
+    if (!profileToDeleteId) return;
+    const remaining = user.profiles.filter(p => p.id !== profileToDeleteId);
+    const nextActiveId = profileToDeleteId === user.activeProfileId ? remaining[0].id : user.activeProfileId;
+    onUpdateUser({ 
+      profiles: remaining,
+      activeProfileId: nextActiveId
+    });
+    setIsDeleteProfileModalOpen(false);
+    setProfileToDeleteId(null);
   };
 
   const handleExport = () => {
@@ -227,47 +225,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
     a.click();
   };
 
-  const MiniTrendChart = ({ data, dataKey, color, title, unit }: { data: any[], dataKey: string, color: string, title: string, unit: string }) => (
-    <div className="bg-blue-50/30 p-4 rounded-2xl border border-blue-100 shadow-sm flex flex-col h-40">
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h4>
-        <span className="text-xs font-bold text-slate-700">{data[data.length - 1][dataKey]} {unit}</span>
-      </div>
-      <div className="flex-grow">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3}/>
-                <stop offset="95%" stopColor={color} stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '10px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: '#ffffff', color: '#0f172a' }}
-              labelStyle={{ fontWeight: 'bold' }}
-            />
-            <Area 
-              type="monotone" 
-              dataKey="value" 
-              stroke={color} 
-              strokeWidth={2} 
-              fillOpacity={1} 
-              fill={`url(#grad-${dataKey})`} 
-              animationDuration={1500}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-
   const getMedCategoryStyles = (type: string) => {
     switch (type) {
       case 'Diabetic': return { color: 'text-blue-600', bg: 'bg-blue-50', icon: Zap };
-      case 'Insulin': return { color: 'text-red-600', bg: 'bg-red-50', icon: Droplets };
+      case 'Insulin': return { color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Droplets };
       case 'Statin': return { color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Heart };
       case 'BP': return { color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Activity };
-      case 'MentalHealth': return { color: 'text-purple-600', bg: 'bg-purple-50', icon: Brain };
+      case 'MentalHealth': return { color: 'text-slate-700', bg: 'bg-slate-50', icon: Brain };
       case 'Hormonal': return { color: 'text-orange-600', bg: 'bg-orange-50', icon: FlaskConical };
       default: return { color: 'text-slate-600', bg: 'bg-slate-50', icon: ClipboardList };
     }
@@ -282,7 +246,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
             <p className="text-slate-500 font-medium">Monitoring data for: <span className="text-blue-600 font-black">{activeProfile.name}</span></p>
             <div className="h-4 w-px bg-slate-200"></div>
             <div className="flex items-center text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg">
-              <CheckCircle2 className="w-3 h-3 mr-1" />
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></div>
               Cloud Synced: {lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
@@ -318,21 +282,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                 </button>
                 
                 {/* Profile Action Overlay */}
-                <div className="absolute -top-1.5 -right-1.5 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 z-10">
+                <div className="absolute -top-2 -right-2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 z-[20]">
                    <button 
                      onClick={(e) => startRename(e, p)}
-                     className="bg-blue-500 text-white p-1 rounded-full shadow-sm hover:bg-blue-600"
+                     className="bg-blue-600 text-white p-1.5 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
                      title="Rename Profile"
                    >
-                     <Edit3 className="w-2.5 h-2.5" />
+                     <Edit3 className="w-3 h-3" />
                    </button>
                    {p.id !== 'default' && (
                      <button 
-                       onClick={(e) => deleteProfile(e, p.id)}
-                       className="bg-red-500 text-white p-1 rounded-full shadow-sm hover:bg-red-600"
+                       onClick={(e) => initiateDeleteProfile(e, p.id)}
+                       className="bg-slate-700 text-white p-1.5 rounded-full shadow-lg hover:bg-slate-900 transition-colors"
                        title="Delete Profile"
                      >
-                       <Trash2 className="w-2.5 h-2.5" />
+                       <Trash2 className="w-3 h-3" />
                      </button>
                    )}
                 </div>
@@ -345,29 +309,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       {/* Latest Status Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className={`p-6 rounded-3xl border-2 shadow-sm flex items-center space-x-4 ${
-            latestAssessment?.status === 'Diabetic' ? 'bg-red-50 border-red-100' : 
+            latestAssessment?.status === 'Diabetic' ? 'bg-slate-50 border-slate-100' : 
             latestAssessment?.status === 'Pre-diabetic' ? 'bg-amber-50 border-amber-100' : 
-            latestAssessment ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'
+            latestAssessment ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'
           }`}>
             <div className={`p-3 rounded-2xl ${
-              latestAssessment?.status === 'Diabetic' ? 'bg-red-600' : 
+              latestAssessment?.status === 'Diabetic' ? 'bg-slate-800' : 
               latestAssessment?.status === 'Pre-diabetic' ? 'bg-amber-500' : 
-              latestAssessment ? 'bg-green-600' : 'bg-slate-400'
+              latestAssessment ? 'bg-emerald-600' : 'bg-slate-400'
             }`}>
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assessment Status</p>
               <p className={`text-xl font-black ${
-                latestAssessment?.status === 'Diabetic' ? 'text-red-600' : 
+                latestAssessment?.status === 'Diabetic' ? 'text-slate-800' : 
                 latestAssessment?.status === 'Pre-diabetic' ? 'text-amber-600' : 
-                latestAssessment ? 'text-green-600' : 'text-slate-400'
+                latestAssessment ? 'text-emerald-600' : 'text-slate-400'
               }`}>{latestAssessment?.status || 'No Assessment Yet'}</p>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center space-x-4">
-             <div className="p-3 rounded-2xl bg-blue-600">
+             <div className="p-3 rounded-2xl bg-indigo-600">
                <Droplets className="w-6 h-6 text-white" />
              </div>
              <div>
@@ -382,7 +346,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
           </div>
 
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center space-x-4">
-             <div className="p-3 rounded-2xl bg-orange-600">
+             <div className="p-3 rounded-2xl bg-slate-700">
                <TrendingUp className="w-6 h-6 text-white" />
              </div>
              <div>
@@ -397,7 +361,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Glucose Tracker */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-          <div className="flex items-center space-x-3 text-red-600">
+          <div className="flex items-center space-x-3 text-indigo-700">
             <Activity className="w-6 h-6" />
             <h2 className="text-xl font-bold">Glucose Tracker</h2>
           </div>
@@ -408,12 +372,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                 value={glucoseVal}
                 onChange={e => setGlucoseVal(e.target.value)}
                 placeholder="Value" 
-                className="flex-grow px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-red-500 outline-none bg-white"
+                className="flex-grow px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-bold"
               />
               <select 
                 value={glucoseType}
                 onChange={e => setGlucoseType(e.target.value as any)}
-                className="px-3 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-red-500 outline-none text-sm bg-white"
+                className="px-3 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white font-bold"
               >
                 <option>Fasting</option>
                 <option>Postprandial</option>
@@ -422,21 +386,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
             </div>
             <button 
               onClick={logGlucose}
-              className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-red-500/20"
+              className="w-full bg-indigo-700 text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-indigo-800 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-indigo-500/20"
             >
               <Plus className="w-5 h-5" />
               <span>Log Reading</span>
             </button>
           </div>
           <div className="space-y-3 max-h-64 overflow-y-auto pr-2 scrollbar-hide">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1 text-center">Recent Logs</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 text-center">Recent Monitoring Logs</h3>
             {activeProfile.glucoseLogs.slice(0, 5).map(log => (
-              <div key={log.id} className="flex items-center justify-between p-3 bg-blue-50/20 rounded-xl border border-slate-100 group hover:border-red-200 transition-colors">
+              <div key={log.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-indigo-200 transition-colors">
                 <div>
                   <p className="font-bold text-slate-900">{log.value} mg/dL</p>
                   <p className="text-[10px] text-slate-400">{log.type} • {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
-                <button onClick={() => deleteLog('glucose', log.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-600 transition-opacity">
+                <button onClick={() => deleteLog('glucose', log.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-slate-900 transition-opacity">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -447,9 +411,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         {/* Nutritional Meal Log */}
         <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 text-green-600">
+            <div className="flex items-center space-x-3 text-emerald-700">
               <Utensils className="w-6 h-6" />
-              <h2 className="text-xl font-bold">Nutritional Meal Log</h2>
+              <h2 className="text-xl font-bold">Nutritional Analysis</h2>
             </div>
           </div>
           <div className="space-y-4">
@@ -457,32 +421,32 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
               value={mealText}
               onChange={e => setMealText(e.target.value)}
               placeholder="Describe your meal... (e.g. 'Oatmeal with berries and a coffee')"
-              className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none resize-none bg-white"
+              className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none bg-white font-medium"
             />
             <button 
               disabled={analyzingMeal || !mealText}
               onClick={handleAnalyzeMeal}
-              className="w-full bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 shadow-lg shadow-green-500/20"
+              className="w-full bg-emerald-700 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-emerald-800 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
             >
               {analyzingMeal ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              <span>{analyzingMeal ? 'Processing...' : 'Log & Process Meal'}</span>
+              <span>{analyzingMeal ? 'Synthesizing...' : 'Log & Process Meal'}</span>
             </button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
              {activeProfile.mealLogs.map(log => (
-              <div key={log.id} className="p-4 bg-blue-50/10 rounded-2xl border border-slate-100 space-y-4 relative group hover:border-green-200 transition-colors flex flex-col">
-                <button onClick={() => deleteLog('meal', log.id)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-600 transition-opacity">
+              <div key={log.id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-4 relative group hover:border-emerald-200 transition-colors flex flex-col">
+                <button onClick={() => deleteLog('meal', log.id)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-slate-900 transition-opacity">
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <div className="flex items-start justify-between">
                   <p className="font-bold text-slate-800 line-clamp-2 pr-6 leading-tight flex-grow">{log.description}</p>
                   {log.analysis && (
-                    <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                      log.analysis.glycemicImpact === 'High' ? 'bg-red-100 text-red-600' : 
-                      log.analysis.glycemicImpact === 'Medium' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
+                    <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                      log.analysis.glycemicImpact === 'High' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
+                      log.analysis.glycemicImpact === 'Medium' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
                     }`}>
-                      {log.analysis.glycemicImpact} GI
+                      {log.analysis.glycemicImpact} Impact
                     </span>
                   )}
                 </div>
@@ -490,27 +454,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                   <div className="space-y-4 mt-1">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[9px] font-bold text-slate-500 uppercase">
+                        <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase">
                           <span>Calories</span>
                           <span>{log.analysis.calories}</span>
                         </div>
                         <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-orange-500" style={{ width: `${Math.min((log.analysis.calories / 1000) * 100, 100)}%` }} />
+                          <div className="h-full bg-slate-800" style={{ width: `${Math.min((log.analysis.calories / 1000) * 100, 100)}%` }} />
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[9px] font-bold text-slate-500 uppercase">
+                        <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase">
                           <span>Carbs</span>
                           <span>{log.analysis.carbs}g</span>
                         </div>
                         <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-green-500" style={{ width: `${Math.min((log.analysis.carbs / 100) * 100, 100)}%` }} />
+                          <div className="h-full bg-indigo-600" style={{ width: `${Math.min((log.analysis.carbs / 100) * 100, 100)}%` }} />
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
-                <p className="text-[10px] text-slate-400 mt-auto">{new Date(log.timestamp).toLocaleDateString()}</p>
+                <p className="text-[10px] text-slate-400 mt-auto font-bold uppercase tracking-widest">{new Date(log.timestamp).toLocaleDateString()}</p>
               </div>
             ))}
           </div>
@@ -521,31 +485,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         {/* Medication Tracking Card */}
         <div className="bg-white text-slate-900 p-6 rounded-[2.5rem] space-y-8 shadow-sm border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 text-blue-600">
+            <div className="flex items-center space-x-3 text-indigo-700">
               <Pill className="w-6 h-6" />
               <h2 className="text-xl font-black tracking-tight">Medications</h2>
             </div>
           </div>
           <div className="space-y-6">
-            <div className="bg-blue-50/20 p-5 rounded-[2rem] border border-blue-100 space-y-4">
-              <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-1">Register New Medication</h3>
+            <div className="bg-indigo-50/20 p-5 rounded-[2rem] border border-indigo-100 space-y-4">
+              <h3 className="text-[10px] font-black text-indigo-700 uppercase tracking-widest px-1">Register New Medication</h3>
               <div className="space-y-3">
                 <input value={medName} onChange={e => setMedName(e.target.value)} placeholder="Medication Name" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-bold" />
                 <div className="grid grid-cols-2 gap-3">
-                  <input value={medDosage} onChange={e => setMedDosage(e.target.value)} placeholder="Dosage" className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none" />
-                  <select value={medType} onChange={e => setMedType(e.target.value as any)} className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-bold text-slate-600">
+                  <input value={medDosage} onChange={e => setMedDosage(e.target.value)} placeholder="Dosage" className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-bold" />
+                  <select value={medType} onChange={e => setMedType(e.target.value as any)} className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none font-black text-slate-600 uppercase tracking-widest">
                     <option value="Diabetic">Diabetic</option>
                     <option value="Insulin">Insulin</option>
                     <option value="Statin">Statin</option>
-                    <option value="BP">Blood Pressure</option>
+                    <option value="BP">BP</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <button onClick={addMedication} disabled={!medName} className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">Register Medication</button>
+                <button onClick={addMedication} disabled={!medName} className="w-full bg-indigo-700 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">Save Record</button>
               </div>
             </div>
             <div className="space-y-6 max-h-[400px] overflow-y-auto scrollbar-hide">
-              {Object.entries(groupedMedications).map(([type, meds]) => {
+              {(Object.entries(groupedMedications) as [string, Medication[]][]).map(([type, meds]) => {
                 const styles = getMedCategoryStyles(type);
                 const Icon = styles.icon;
                 return (
@@ -556,12 +520,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                     </div>
                     {meds.map(med => (
                       <div key={med.id} className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between group relative overflow-hidden">
-                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${styles.color.replace('text-', 'bg-')}`}></div>
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${styles.bg.replace('bg-', 'bg-')}`}></div>
                         <div>
                           <p className="text-sm font-black text-slate-900">{med.name}</p>
                           <span className="text-[10px] font-bold text-slate-400">{med.dosage}</span>
                         </div>
-                        <button onClick={() => deleteLog('medication', med.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteLog('medication', med.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-slate-900 transition-all"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>
@@ -572,12 +536,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         </div>
 
         {/* Data Vault (Database Control) */}
-        <div className="bg-slate-900 text-white p-8 rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col space-y-8">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+        <div className="bg-slate-900 text-white p-8 rounded-[3rem] shadow-xl relative overflow-hidden flex flex-col space-y-8">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
            <div className="relative z-10">
-              <div className="flex items-center space-x-3 text-blue-400 mb-6">
+              <div className="flex items-center space-x-3 text-indigo-400 mb-6">
                 <Database className="w-8 h-8" />
-                <h2 className="text-2xl font-black tracking-tight">Data Vault</h2>
+                <h2 className="text-2xl font-black tracking-tight text-white">Data Vault</h2>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed font-medium mb-10">
                 Manage your persistent backend records. All health data is encrypted and stored securely within your private account.
@@ -588,8 +552,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                    onClick={handleExport}
                    className="w-full flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group"
                  >
-                    <div className="flex items-center space-x-4">
-                       <Download className="w-5 h-5 text-blue-400" />
+                    <div className="flex items-center space-x-4 text-white">
+                       <Download className="w-5 h-5 text-indigo-400" />
                        <div className="text-left">
                           <p className="text-sm font-bold">Export Backup</p>
                           <p className="text-[10px] text-slate-500">Download health history (.json)</p>
@@ -599,21 +563,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                  </button>
 
                  <button 
-                   onClick={() => db.clearAllData()}
-                   className="w-full flex items-center justify-between p-5 bg-red-500/5 border border-red-500/10 rounded-2xl hover:bg-red-500/10 transition-all group"
+                   onClick={() => setIsPurgeVaultModalOpen(true)}
+                   className="w-full flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-slate-800 transition-all group"
                  >
-                    <div className="flex items-center space-x-4">
-                       <ShieldAlert className="w-5 h-5 text-red-400" />
+                    <div className="flex items-center space-x-4 text-white">
+                       <ShieldAlert className="w-5 h-5 text-slate-400" />
                        <div className="text-left">
-                          <p className="text-sm font-bold text-red-200">Purge Data</p>
-                          <p className="text-[10px] text-red-900">Irreversible clearing of all profiles</p>
+                          <p className="text-sm font-bold text-slate-200">Purge Data</p>
+                          <p className="text-[10px] text-slate-500">Irreversible clearing of all profiles</p>
                        </div>
                     </div>
                  </button>
               </div>
 
-              <div className="mt-12 p-6 bg-blue-500/5 rounded-3xl border border-blue-500/10 space-y-4">
-                 <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-blue-400">
+              <div className="mt-12 p-6 bg-indigo-500/5 rounded-3xl border border-indigo-500/10 space-y-4">
+                 <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-indigo-400">
                     <History className="w-3 h-3" />
                     <span>Integrity Report</span>
                  </div>
@@ -633,28 +597,30 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
 
         {/* Activity Tracking */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-          <div className="flex items-center space-x-3 text-indigo-600">
+          <div className="flex items-center space-x-3 text-slate-800">
             <Dumbbell className="w-6 h-6" />
             <h2 className="text-xl font-bold">Quick Activity</h2>
           </div>
           <div className="space-y-4">
-            <input value={exType} onChange={e => setExType(e.target.value)} placeholder="Activity" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" />
+            <input value={exType} onChange={e => setExType(e.target.value)} placeholder="Activity" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none font-bold" />
             <div className="flex gap-2">
-              <input type="number" value={exDuration} onChange={e => setExDuration(e.target.value)} placeholder="Mins" className="w-1/2 px-4 py-3 rounded-xl border border-slate-200" />
-              <select value={exIntensity} onChange={e => setExIntensity(e.target.value as any)} className="w-1/2 px-4 py-3 rounded-xl border border-slate-200">
+              <input type="number" value={exDuration} onChange={e => setExDuration(e.target.value)} placeholder="Mins" className="w-1/2 px-4 py-3 rounded-xl border border-slate-200 font-bold" />
+              <select value={exIntensity} onChange={e => setExIntensity(e.target.value as any)} className="w-1/2 px-4 py-3 rounded-xl border border-slate-200 font-bold">
                 <option value="Low">Low</option>
                 <option value="Moderate">Moderate</option>
                 <option value="High">High</option>
               </select>
             </div>
-            <button onClick={logExercise} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg">Log Effort</button>
+            <button onClick={logExercise} className="w-full bg-slate-800 text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg">Log Effort</button>
           </div>
         </div>
       </div>
 
+      {/* MODALS */}
+
       {/* Add Profile Modal */}
       {isProfileModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
              <div className="p-8 bg-blue-600 text-white">
                 <h3 className="text-2xl font-black">Add Family Member</h3>
@@ -663,11 +629,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
              <div className="p-8 space-y-6">
                 <div>
                    <label className="block text-sm font-bold text-slate-700 mb-2">Member Name</label>
-                   <input value={newProfileName} onChange={(e) => setNewProfileName(e.target.value)} placeholder="e.g. Mary Jane" className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" />
+                   <input value={newProfileName} onChange={(e) => setNewProfileName(e.target.value)} placeholder="e.g. Mary Jane" className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" />
                 </div>
                 <div>
                    <label className="block text-sm font-bold text-slate-700 mb-2">Relationship</label>
-                   <select value={newProfileRelationship} onChange={(e) => setNewProfileRelationship(e.target.value)} className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                   <select value={newProfileRelationship} onChange={(e) => setNewProfileRelationship(e.target.value)} className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
                      <option>Self</option>
                      <option>Spouse</option>
                      <option>Child</option>
@@ -685,7 +651,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
 
       {/* Rename Profile Modal */}
       {isRenameModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
              <div className="p-8 bg-blue-600 text-white">
                 <h3 className="text-2xl font-black flex items-center">
@@ -711,6 +677,85 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                    <button disabled={!renamingProfileName.trim()} onClick={handleRename} className="flex-1 px-6 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl disabled:opacity-50">Save Changes</button>
                 </div>
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal: Delete Profile */}
+      {isDeleteProfileModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 bg-slate-900 text-white">
+              <div className="flex items-center space-x-3 mb-2 text-indigo-400">
+                <AlertTriangle className="w-6 h-6" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Medical Record Disposal</span>
+              </div>
+              <h3 className="text-2xl font-black">Verify Record Removal</h3>
+            </div>
+            <div className="p-8 space-y-6">
+              {deleteProfileError ? (
+                <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start space-x-3 text-indigo-900">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <p className="text-sm font-bold">{deleteProfileError}</p>
+                </div>
+              ) : (
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  You are about to permanently delete this profile and all associated medical history. This action is irreversible within the cloud environment.
+                </p>
+              )}
+              
+              <div className="flex gap-4 pt-2">
+                <button 
+                  onClick={() => setIsDeleteProfileModalOpen(false)} 
+                  className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                {!deleteProfileError && (
+                  <button 
+                    onClick={handleConfirmDeleteProfile} 
+                    className="flex-1 px-6 py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                  >
+                    Confirm Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal: Purge Vault */}
+      {isPurgeVaultModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 bg-slate-900 text-white">
+              <div className="flex items-center space-x-3 mb-2 text-indigo-400">
+                <ShieldAlert className="w-6 h-6" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Global Vault Purge</span>
+              </div>
+              <h3 className="text-2xl font-black">Terminate All Records?</h3>
+            </div>
+            <div className="p-8 space-y-6">
+              <p className="text-slate-500 font-medium leading-relaxed">
+                This will wipe the entire metabolic database. All profiles, assessments, and historical trends will be permanently lost.
+              </p>
+              
+              <div className="flex gap-4 pt-2">
+                <button 
+                  onClick={() => setIsPurgeVaultModalOpen(false)} 
+                  className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => db.clearAllData()} 
+                  className="flex-1 px-6 py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                >
+                  Purge Vault
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

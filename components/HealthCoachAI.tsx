@@ -72,10 +72,10 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 h-[calc(100vh-5rem)] flex flex-col animate-in fade-in duration-500 bg-white">
-      <div className="bg-white rounded-[2.5rem] border border-blue-100 shadow-sm overflow-hidden flex flex-col flex-grow">
+    <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col animate-in fade-in duration-500 bg-white">
+      <div className="bg-white rounded-[2.5rem] border border-blue-100 shadow-sm overflow-hidden flex flex-col h-[650px] max-h-[80vh]">
         {/* Header */}
-        <div className="bg-blue-50 p-6 flex items-center justify-between text-slate-900 border-b border-blue-100">
+        <div className="bg-blue-50 p-6 flex items-center justify-between text-slate-900 border-b border-blue-100 shrink-0">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
               <Bot className="w-7 h-7 text-white" />
@@ -115,7 +115,7 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
         </div>
 
         {/* Footer Area */}
-        <div className="p-6 bg-white border-t border-blue-50">
+        <div className="p-6 bg-white border-t border-blue-50 shrink-0">
           <div className="relative">
             <input 
               value={input}
@@ -133,6 +133,24 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
             </button>
           </div>
         </div>
+      </div>
+      
+      {/* Quick Suggestions - Fixed beneath chat to provide instant value */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button onClick={() => setInput("What are low-GI breakfast options?")} className="p-4 bg-slate-50 hover:bg-blue-50 border border-slate-100 rounded-2xl text-left transition-colors group">
+           <div className="flex items-center space-x-2 text-blue-600 mb-1">
+             <Apple className="w-4 h-4" />
+             <span className="text-[10px] font-black uppercase tracking-widest">Nutrition</span>
+           </div>
+           <p className="text-xs font-bold text-slate-600 group-hover:text-blue-700">Explore low-GI breakfast ideas...</p>
+        </button>
+        <button onClick={() => setInput("How does a 15-minute walk help my blood sugar?")} className="p-4 bg-slate-50 hover:bg-blue-50 border border-slate-100 rounded-2xl text-left transition-colors group">
+           <div className="flex items-center space-x-2 text-indigo-600 mb-1">
+             <Dumbbell className="w-4 h-4" />
+             <span className="text-[10px] font-black uppercase tracking-widest">Activity</span>
+           </div>
+           <p className="text-xs font-bold text-slate-600 group-hover:text-indigo-700">Benefits of post-meal walks...</p>
+        </button>
       </div>
     </div>
   );

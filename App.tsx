@@ -11,7 +11,6 @@ import Education from './components/Education';
 import HealthCoach from './components/HealthCoachAI';
 import ActionPlan from './components/ActionPlan';
 import LifestyleInsights from './components/LifestyleInsights';
-import VisualIntelligence from './components/VisualIntelligence';
 import AppTutorial from './components/AppTutorial';
 import BrandBanner from './components/BrandBanner';
 import { db } from './services/database';
@@ -124,7 +123,6 @@ const App: React.FC = () => {
               <Route path="/education" element={<Education />} />
               <Route path="/coach" element={<HealthCoach user={user} activeProfile={activeProfile} />} />
               <Route path="/dashboard" element={user && activeProfile ? <Dashboard user={user} activeProfile={activeProfile} onUpdateUser={updateUser} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
-              <Route path="/media-lab" element={user && activeProfile ? <VisualIntelligence /> : <Navigate to="/auth" />} />
               <Route path="/action-plan" element={user && activeProfile ? <ActionPlan user={user} activeProfile={activeProfile} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
               <Route path="/insights" element={user && activeProfile ? <LifestyleInsights activeProfile={activeProfile} /> : <Navigate to="/auth" />} />
               <Route path="/assess" element={<DiagnosticForm user={user} activeProfile={activeProfile} onComplete={addResultToHistory} />} />

@@ -1,16 +1,48 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { HealthData, AssessmentResult, DiabetesStatus, RiskLevel, MealLog, RecipeRecommendation, ExercisePlan } from "../types";
 
 // Always use the recommended initialization with the API key from environment variables.
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+/**
+ * Generate a standard quality exercise illustration using gemini-2.5-flash-image.
+ * This is faster and suitable for real-time instructional visual aids.
+ */
+export async function generateExerciseIllustration(exerciseName: string): Promise<string> {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [
+        {
+          text: `A clear, clinical, 2D vector illustration of a person correctly performing the exercise: ${exerciseName}. White background, professional medical style, emphasizing proper form and metabolic safety.`,
+        },
+      ],
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: "1:1"
+      }
+    }
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  throw new Error("Image generation failed.");
+}
+
+/**
+ * Find educational videos about a health topic using Google Search grounding.
+ */
 export async function findEducationalVideos(topic: string) {
   const ai = getAI();
   const prompt = `
-    Find high-quality, scientifically accurate educational VIDEOS on YouTube about: "${topic}".
-    Focus grounding EXCLUSIVELY on youtube.com.
-    PRIORITIZE content from established US medical organizations.
+    Summarize current medical consensus and find high-quality educational VIDEOS on YouTube about: "${topic}".
+    Focus grounding EXCLUSIVELY on youtube.com and established medical portals.
+    Keep the summary concise.
   `;
 
   const response = await ai.models.generateContent({
@@ -18,6 +50,7 @@ export async function findEducationalVideos(topic: string) {
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
+      thinkingConfig: { thinkingBudget: 0 }
     },
   });
 
@@ -27,6 +60,95 @@ export async function findEducationalVideos(topic: string) {
   };
 }
 
+/**
+ * Analyze an image for clinical relevance using vision capabilities.
+ */
+export async function analyzeImage(base64: string, mimeType: string): Promise<string> {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: {
+      parts: [
+        {
+          inlineData: {
+            data: base64,
+            mimeType: mimeType,
+          },
+        },
+        {
+          text: 'Analyze this image for clinical relevance to diabetes management (e.g., food, medical equipment, or health logs). Provide a detailed, medically informative, and empathetic report.',
+        },
+      ],
+    },
+  });
+  return response.text || "No analysis available.";
+}
+
+/**
+ * Generate a high-quality health-related illustration.
+ */
+export async function generateHealthImage(prompt: string, imageSize: "1K" | "2K" | "4K"): Promise<string> {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-image-preview',
+    contents: {
+      parts: [
+        {
+          text: `Professional clinical illustration: ${prompt}. Anatomically accurate, high quality, medical textbook style.`,
+        },
+      ],
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: "16:9",
+        imageSize: imageSize
+      },
+    },
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  throw new Error("Image generation failed to return data.");
+}
+
+/**
+ * Generate an instructional exercise video using the Veo model.
+ */
+export async function generateExerciseVideo(base64: string, mimeType: string, prompt: string): Promise<string> {
+  const ai = getAI();
+  let operation = await ai.models.generateVideos({
+    model: 'veo-3.1-fast-generate-preview',
+    prompt: `An instructional health video demonstrating ${prompt} starting from the provided frame. Focus on smooth, correct clinical form.`,
+    image: {
+      imageBytes: base64,
+      mimeType: mimeType,
+    },
+    config: {
+      numberOfVideos: 1,
+      resolution: '720p',
+      aspectRatio: '16:9'
+    }
+  });
+
+  while (!operation.done) {
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    operation = await ai.operations.getVideosOperation({ operation: operation });
+  }
+
+  const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+  if (!downloadLink) throw new Error("Video generation failed to return a download link.");
+
+  const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+  const blob = await videoResponse.blob();
+  return URL.createObjectURL(blob);
+}
+
+/**
+ * Generate personalized exercise plans based on health assessment.
+ */
 export async function getPersonalizedExercisePlans(assessment: AssessmentResult, age: number, equipment: string[]): Promise<ExercisePlan[]> {
   const ai = getAI();
   const prompt = `
@@ -101,91 +223,9 @@ export async function getPersonalizedExercisePlans(assessment: AssessmentResult,
   return JSON.parse(response.text).plans;
 }
 
-export async function analyzeImage(base64Data: string, mimeType: string, customPrompt?: string) {
-  const ai = getAI();
-  const prompt = customPrompt || "Analyze this image in the context of metabolic health and diabetes management. If it's food, estimate nutritional content. If it's a label, extract critical health data.";
-  
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: {
-      parts: [
-        { inlineData: { data: base64Data, mimeType } },
-        { text: prompt }
-      ]
-    }
-  });
-
-  return response.text;
-}
-
 /**
- * Generates health-related clinical illustrations.
- * Upgrades to gemini-3-pro-image-preview for high quality (1K, 2K, 4K).
+ * Get Glycemic Index information for a specific food using Google Search grounding.
  */
-export async function generateHealthImage(prompt: string, config: "1:1" | "16:9" | "4:3" | "1K" | "2K" | "4K" = "16:9") {
-  // Create a new GoogleGenAI instance right before making an API call to ensure it uses the latest API key.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const isHighQuality = config === "1K" || config === "2K" || config === "4K";
-  const model = isHighQuality ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
-  
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: {
-      parts: [{ text: `High quality clinical illustration for metabolic fitness: ${prompt}. Show proper posture and focus on the specific muscle groups.` }],
-    },
-    config: {
-      imageConfig: {
-        aspectRatio: (isHighQuality ? "1:1" : config) as any,
-        ...(isHighQuality ? { imageSize: config as any } : {})
-      }
-    },
-  });
-
-  const parts = response.candidates?.[0]?.content?.parts || [];
-  for (const part of parts) {
-    if (part.inlineData) {
-      return `data:image/png;base64,${part.inlineData.data}`;
-    }
-  }
-  throw new Error("No image data returned from model");
-}
-
-/**
- * Generates an exercise video using Veo models.
- */
-export async function generateExerciseVideo(imageBytes: string, mimeType: string, prompt: string): Promise<string> {
-  // Create a new GoogleGenAI instance right before making an API call for Veo models.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  let operation = await ai.models.generateVideos({
-    model: 'veo-3.1-fast-generate-preview',
-    prompt: `Animate this health exercise: ${prompt}`,
-    image: {
-      imageBytes,
-      mimeType,
-    },
-    config: {
-      numberOfVideos: 1,
-      resolution: '720p',
-      aspectRatio: '16:9'
-    }
-  });
-
-  while (!operation.done) {
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    operation = await ai.operations.getVideosOperation({ operation: operation });
-  }
-
-  const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-  if (!downloadLink) throw new Error("Video generation failed: no URI returned");
-  
-  // The response.body contains the MP4 bytes. Must append API key when fetching from the download link.
-  const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
-}
-
 export async function getFoodGIInfo(foodName: string) {
   const ai = getAI();
   const prompt = `Analyze Glycemic Index (GI) for: "${foodName}". Provide category, GI value, reasoning, and metabolic hack.`;
@@ -207,7 +247,8 @@ export async function getFoodGIInfo(foodName: string) {
           fiberContent: { type: Type.STRING }
         },
         required: ["food", "category", "giValue", "reasoning", "metabolicHack"]
-      }
+      },
+      thinkingConfig: { thinkingBudget: 0 }
     }
   });
   return {
@@ -216,6 +257,9 @@ export async function getFoodGIInfo(foodName: string) {
   };
 }
 
+/**
+ * Suggest ethnic recipes based on dietary preferences.
+ */
 export async function getEthnicMealRecommendations(ethnicity: string, preference: string): Promise<RecipeRecommendation[]> {
   const ai = getAI();
   const prompt = `Suggest healthy, diabetic-friendly recipes for ${ethnicity} cuisine with ${preference} preference.`;
@@ -252,6 +296,9 @@ export async function getEthnicMealRecommendations(ethnicity: string, preference
   return JSON.parse(response.text).meals;
 }
 
+/**
+ * Analyze a specific meal for nutritional impact.
+ */
 export async function analyzeMeal(description: string, userStatus?: string): Promise<NonNullable<MealLog['analysis']>> {
   const ai = getAI();
   const prompt = `Analyze meal: "${description}". Context: ${userStatus || 'general'}. Provide nutritional data and diabetic suggestions.`;
@@ -278,13 +325,16 @@ export async function analyzeMeal(description: string, userStatus?: string): Pro
   return JSON.parse(response.text);
 }
 
+/**
+ * Perform a comprehensive health data assessment and risk forecast.
+ */
 export async function analyzeHealthData(data: HealthData): Promise<AssessmentResult> {
   const ai = getAI();
   const weightKg = data.weightLbs * 0.453592;
   const totalInches = (data.heightFeet * 12) + data.heightInches;
   const heightCm = totalInches * 2.54;
   const bmi = parseFloat((weightKg / ((heightCm / 100) ** 2)).toFixed(1));
-  const prompt = `Perform diabetes risk assessment for: BMI ${bmi}, Age ${data.age}, HbA1c ${data.hba1c || 'None'}. Provide report.`;
+  const prompt = `Perform professional diabetes risk assessment for: BMI ${bmi}, Age ${data.age}, HbA1c ${data.hba1c || 'None'}. Provide a structured report including status, risk level, and action plans.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
     contents: prompt,

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../services/database';
@@ -30,14 +29,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     setError(null);
     setLoading(true);
     
+    // Sanitize input
+    const cleanEmail = email.trim();
+
     try {
       let user: User;
       if (isLogin) {
-        user = await db.login(email);
+        user = await db.login(cleanEmail);
       } else {
-        const namePrefix = email.split('@')[0];
+        const namePrefix = cleanEmail.split('@')[0];
         const derivedName = namePrefix.charAt(0).toUpperCase() + namePrefix.slice(1);
-        user = await db.register(derivedName, email);
+        user = await db.register(derivedName, cleanEmail);
       }
       onLogin(user);
       navigate('/dashboard');
@@ -91,14 +93,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                  <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClasses} placeholder="name@example.com" />
+                  <input 
+                    required 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    className={inputClasses} 
+                    placeholder="name@example.com"
+                    autoComplete="email"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                  <input required type="password" className={inputClasses} placeholder="••••••••" />
+                  <input required type="password" className={inputClasses} placeholder="••••••••" autoComplete="current-password" />
                 </div>
               </div>
             </div>

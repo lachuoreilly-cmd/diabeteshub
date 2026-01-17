@@ -1,4 +1,3 @@
-
 import { User, Profile, DiabetesStatus, RiskLevel, Medication } from '../types';
 
 /**
@@ -9,6 +8,7 @@ import { User, Profile, DiabetesStatus, RiskLevel, Medication } from '../types';
 
 const DB_NAME = 'diabetes_hub_prod_v1';
 const SESSION_NAME = 'diabetes_hub_auth_token';
+const DEMO_EMAIL = 'demo@diabetes-companion.ai';
 
 class DatabaseService {
   private async delay(ms: number = 500) {
@@ -20,9 +20,11 @@ class DatabaseService {
     const data = localStorage.getItem(DB_NAME);
     if (!data) return [];
     try {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-      console.error("API Sync Error: Data integrity check failed.");
+      console.error("API Sync Error: Data integrity check failed. Resetting store.");
+      localStorage.removeItem(DB_NAME);
       return [];
     }
   }
@@ -32,19 +34,23 @@ class DatabaseService {
   }
 
   /**
-   * SEEDING: Initializes core system profiles if none exist.
+   * SEEDING: Initializes core system profiles if the demo account is missing.
    */
   public async seed() {
     const users = this.getStore();
-    if (users.length === 0) {
+    const demoExists = users.some(u => u.email.toLowerCase() === DEMO_EMAIL);
+    
+    if (!demoExists) {
       const demoUser: User = {
         id: 'u_demo_99',
-        email: 'demo@diabetes-companion.ai',
+        email: DEMO_EMAIL,
         name: 'Demo Patient',
         profiles: [this.createProfile('Demo Patient', true)],
         activeProfileId: 'default'
       };
-      this.commit([demoUser]);
+      users.push(demoUser);
+      this.commit(users);
+      console.debug("System logic: Demo account synchronized.");
     }
   }
 
@@ -104,16 +110,17 @@ class DatabaseService {
 
   public async register(name: string, email: string): Promise<User> {
     await this.delay(800);
+    const sanitizedEmail = email.trim().toLowerCase();
     const users = this.getStore();
     
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    if (users.find(u => u.email.toLowerCase() === sanitizedEmail)) {
       throw new Error("This email is already registered in our database.");
     }
 
     const newUser: User = {
       id: `u_${Math.random().toString(36).substr(2, 9)}`,
       name,
-      email: email.toLowerCase(),
+      email: sanitizedEmail,
       profiles: [this.createProfile(name, false)],
       activeProfileId: 'default'
     };
@@ -126,11 +133,12 @@ class DatabaseService {
 
   public async login(email: string): Promise<User> {
     await this.delay(600);
+    const sanitizedEmail = email.trim().toLowerCase();
     const users = this.getStore();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const user = users.find(u => u.email.toLowerCase() === sanitizedEmail);
     
     if (!user) {
-      throw new Error("The requested health record was not found in our system.");
+      throw new Error("The requested health record was not found in our system. If you are using the demo account, ensure spelling is exact.");
     }
 
     localStorage.setItem(SESSION_NAME, user.id);

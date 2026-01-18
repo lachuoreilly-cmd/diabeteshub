@@ -14,16 +14,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serverStatus, setServerStatus] = useState<'connecting' | 'online'>('connecting');
+  const [serverStatus, setServerStatus] = useState<'connecting' | 'online'>('online');
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const initDb = async () => {
-      await db.seed();
-      setServerStatus('online');
-    };
-    initDb();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

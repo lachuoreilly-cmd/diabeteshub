@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { MessageSquare, Bot, Send, Sparkles, User, Loader2, Info, ArrowLeft, RefreshCcw, Lightbulb, Apple, Dumbbell } from 'lucide-react';
 import { User as UserType, Profile } from '../types';
 
@@ -33,43 +33,79 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    const currentMessages = [...messages, { role: 'user', text: userMessage }];
+    setMessages(currentMessages);
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        await (window as any).aistudio.openSelectKey();
+      }
+
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY);
       const latestAssessment = activeProfile?.history[0];
       
       const systemInstruction = `
-        You are a professional, empathetic, and knowledgeable Diabetes Health Coach. 
-        Context: The user is named ${user?.name || 'Guest'}. 
-        Health Status: ${latestAssessment ? latestAssessment.status : 'Unknown'}.
-        Last BMI: ${latestAssessment ? latestAssessment.bmi : 'Not recorded'}.
+        You are a professional, empathetic, and knowledgeable Diabetes Health Coach. Your goal is to provide safe, helpful, and accurate advice.
         
-        Guidelines:
-        1. Provide evidence-based advice on diet, exercise, and lifestyle.
-        2. Keep explanations simple but medically accurate.
-        3. ALWAYS include a small disclaimer that you are an educational tool.
+        User Context:
+        - Name: ${user?.name || 'Guest'}
+        - Last Assessed Metabolic Status: ${latestAssessment ? latestAssessment.status : 'Unknown'}
+        - Last Recorded BMI: ${latestAssessment ? latestAssessment.bmi : 'Not recorded'}
+
+        Operational Guidelines:
+        1.  **Evidence-Based & Safe:** All advice MUST be based on established medical evidence and safety guidelines. Prioritize user well-being above all.
+        2.  **Simple & Accurate:** Explain complex topics in simple, easy-to-understand language without sacrificing medical accuracy.
+        3.  **Empathetic & Supportive:** Use a supportive and encouraging tone. Acknowledge the user's feelings and challenges.
+        4.  **Actionable Advice:** Provide concrete, actionable steps the user can take (e.g., "Try adding a handful of spinach to your next meal" instead of "Eat more vegetables").
+        5.  **Educational Disclaimer:** ALWAYS conclude your response with a small disclaimer: "Remember, I am an AI educational tool. Always consult with a qualified healthcare professional for medical advice."
+        6.  **Scope Limitation:** Do not provide diagnoses, prescribe medication, or give advice that should only come from a doctor. If asked, gently redirect the user to their physician.
       `;
 
-      const chat = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        config: {
-          systemInstruction,
-        }
+      const model = genAI.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        systemInstruction: systemInstruction,
       });
 
-      const response = await chat.sendMessage({ message: userMessage });
-      const responseText = response.text || "I couldn't process that. Please try rephrasing.";
+      const chatHistory = messages.map(msg => ({
+        role: msg.role,
+        parts: [{ text: msg.text }]
+      }));
+
+      const chat = model.startChat({
+        history: chatHistory,
+        generationConfig: {
+          temperature: 0.8,
+          topP: 0.9,
+          maxOutputTokens: 1000,
+        },
+        safetySettings: [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        ]
+      });
+      
+      const result = await chat.sendMessage(userMessage);
+      const response = result.response;
+      const responseText = response.text();
       
       setMessages(prev => [...prev, { role: 'model', text: responseText }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Coach error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to my knowledge base. Please try again." }]);
+      let errorMessage = "I'm having trouble connecting to my knowledge base. Please try again.";
+      if (error?.message?.includes("API key not valid")) {
+        errorMessage = "Your API Key is not valid. Please select a valid key from a paid project (ai.google.dev/gemini-api/docs/billing).";
+        (window as any).aistudio.openSelectKey();
+      }
+      setMessages(prev => [...prev, { role: 'model', text: errorMessage }]);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 h-[calc(100vh-5rem)] flex flex-col animate-in fade-in duration-500 bg-white">

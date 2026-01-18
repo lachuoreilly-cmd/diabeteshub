@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { analyzeHealthData } from '../services/geminiService';
 import { HealthData, AssessmentResult, User, Profile } from '../types';
 import ResultsDashboard from './ResultsDashboard';
-import { 
-  AlertCircle, ChevronRight, ChevronLeft, Loader2, Heart, Scale, Activity, 
-  Pill, Utensils, Thermometer, Info, CheckCircle2, Users, Moon, Zap, 
-  Wine, Ban, ShieldCheck, Waves, Sparkles, 
+import {
+  AlertCircle, ChevronRight, ChevronLeft, Loader2, Heart, Scale, Activity,
+  Pill, Utensils, Thermometer, Info, CheckCircle2, Users, Moon, Zap,
+  Wine, Ban, ShieldCheck, Waves, Sparkles,
   Brain, Stethoscope, Droplet, Dumbbell, Globe, ClipboardCheck,
   UserCheck, Beaker, History
 } from 'lucide-react';
@@ -21,14 +21,7 @@ interface ValidationErrors {
   [key: string]: string;
 }
 
-const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, onComplete }) => {
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AssessmentResult | null>(null);
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
-
-  const [formData, setFormData] = useState<HealthData>({
+const initialHealthData: HealthData = {
     age: 30,
     gender: 'male',
     ethnicity: 'Not specified',
@@ -70,7 +63,16 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
       others: { antihistamines: '', ppis: '', antibiotics: '', nsaids: '', aspirin: '' }
     },
     medications: {}
-  });
+  };
+
+const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, onComplete }) => {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<AssessmentResult | null>(null);
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+
+  const [formData, setFormData] = useState<HealthData>(initialHealthData);
 
   useEffect(() => {
     let dietScore = 80;
@@ -97,8 +99,8 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
       sleep_quality_score: Math.max(0, Math.min(100, sleepScore))
     }));
   }, [
-    formData.dietSurvey.sugaryDrinks, 
-    formData.dietSurvey.processedFoods, 
+    formData.dietSurvey.sugaryDrinks,
+    formData.dietSurvey.processedFoods,
     formData.dietSurvey.fiberIntake,
     formData.sleep_hours_per_night,
     formData.stress_level
@@ -173,25 +175,27 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step !== 5) return;
-
-    const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-    if (!hasKey) {
-      await (window as any).aistudio.openSelectKey();
-    }
     
     setLoading(true);
+    
+    // Create a deep copy to avoid mutating the original state
+    const dataForAnalysis = JSON.parse(JSON.stringify(formData));
+
+    // Revert empty number fields to their default values
+    Object.keys(dataForAnalysis).forEach(key => {
+        const initialValue = initialHealthData[key as keyof HealthData];
+        if (typeof initialValue === 'number' && dataForAnalysis[key] === undefined) {
+             dataForAnalysis[key] = initialValue;
+        }
+    });
+
     try {
-      const assessment = await analyzeHealthData(formData);
+      const assessment = await analyzeHealthData(dataForAnalysis);
       setResult(assessment);
-      onComplete(assessment, formData);
+      onComplete(assessment, dataForAnalysis);
     } catch (error: any) {
       console.error(error);
-      if (error?.message?.includes("Requested entity was not found.")) {
-         alert("API Key error. Please select a valid key from a paid project (ai.google.dev/gemini-api/docs/billing).");
-         await (window as any).aistudio.openSelectKey();
-      } else {
-         alert("Analysis failed. Please try again.");
-      }
+      alert("Analysis failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -199,11 +203,11 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
   if (result) {
     return (
-      <ResultsDashboard 
-        result={result} 
+      <ResultsDashboard
+        result={result}
         isGuest={!user}
-        onReset={() => { setResult(null); setStep(1); }} 
-        onEdit={() => setResult(null)} 
+        onReset={() => { setResult(null); setStep(1); setFormData(initialHealthData); }}
+        onEdit={() => setResult(null)}
       />
     );
   }
@@ -218,6 +222,8 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
       {sub && <p className="text-xs text-slate-500 font-medium mt-1 leading-tight">{sub}</p>}
     </div>
   );
+  
+  const getNumericValue = (value: number | undefined) => value === undefined ? '' : String(value);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 bg-white">
@@ -232,7 +238,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
             <div className="flex items-center space-x-3">
               {[1, 2, 3, 4, 5].map(i => (
                 <div key={i} className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${
-                  step === i ? 'bg-blue-600 text-white shadow-lg' : 
+                  step === i ? 'bg-blue-600 text-white shadow-lg' :
                   step > i ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
                 }`}>
                   {step > i ? <CheckCircle2 className="w-5 h-5" /> : i}
@@ -253,7 +259,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-14">
                 <div className="space-y-1">
                   <Label text="Age" />
-                  <input type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses('age')} />
+                  <input type="number" name="age" value={getNumericValue(formData.age)} onChange={handleChange} className={inputClasses('age')} />
                   {errors.age && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.age}</p>}
                 </div>
                 <div className="space-y-1">
@@ -279,16 +285,16 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                 </div>
                 <div className="space-y-1">
                   <Label text="Weight (Lbs)" />
-                  <input type="number" name="weightLbs" value={formData.weightLbs} onChange={handleChange} className={inputClasses('weightLbs')} />
+                  <input type="number" name="weightLbs" value={getNumericValue(formData.weightLbs)} onChange={handleChange} className={inputClasses('weightLbs')} />
                   {errors.weightLbs && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.weightLbs}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Height (Feet)" />
-                  <input type="number" name="heightFeet" value={formData.heightFeet} onChange={handleChange} className={inputClasses('heightFeet')} />
+                  <input type="number" name="heightFeet" value={getNumericValue(formData.heightFeet)} onChange={handleChange} className={inputClasses('heightFeet')} />
                 </div>
                 <div className="space-y-1">
                   <Label text="Height (Inches)" />
-                  <input type="number" name="heightInches" value={formData.heightInches} onChange={handleChange} className={inputClasses('heightInches')} />
+                  <input type="number" name="heightInches" value={getNumericValue(formData.heightInches)} onChange={handleChange} className={inputClasses('heightInches')} />
                 </div>
               </div>
             </div>
@@ -306,12 +312,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   <div className="grid grid-cols-2 gap-8">
                     <div>
                       <Label text="Systolic BP" sub="Upper Number" />
-                      <input type="number" name="systolicBP" value={formData.systolicBP} onChange={handleChange} className={inputClasses('systolicBP')} />
+                      <input type="number" name="systolicBP" value={getNumericValue(formData.systolicBP)} onChange={handleChange} className={inputClasses('systolicBP')} />
                       {errors.systolicBP && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.systolicBP}</p>}
                     </div>
                     <div>
                       <Label text="Diastolic BP" sub="Lower Number" />
-                      <input type="number" name="diastolicBP" value={formData.diastolicBP} onChange={handleChange} className={inputClasses('diastolicBP')} />
+                      <input type="number" name="diastolicBP" value={getNumericValue(formData.diastolicBP)} onChange={handleChange} className={inputClasses('diastolicBP')} />
                       {errors.diastolicBP && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.diastolicBP}</p>}
                     </div>
                   </div>
@@ -333,12 +339,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   </div>
                   <div>
                     <Label text="Latest HbA1c (%)" sub="Leave blank if unknown" />
-                    <input type="number" step="0.1" name="hba1c" value={formData.hba1c} onChange={handleChange} placeholder="e.g. 5.7" className={inputClasses('hba1c')} />
+                    <input type="number" step="0.1" name="hba1c" value={getNumericValue(formData.hba1c)} onChange={handleChange} placeholder="e.g. 5.7" className={inputClasses('hba1c')} />
                     {errors.hba1c && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.hba1c}</p>}
                   </div>
                   <div>
                     <Label text="Fasting Glucose" sub="mg/dL" />
-                    <input type="number" name="lastGlucose" value={formData.lastGlucose} onChange={handleChange} placeholder="e.g. 98" className={inputClasses('lastGlucose')} />
+                    <input type="number" name="lastGlucose" value={getNumericValue(formData.lastGlucose)} onChange={handleChange} placeholder="e.g. 98" className={inputClasses('lastGlucose')} />
                   </div>
                 </div>
               </div>
@@ -355,12 +361,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
                 <div className="space-y-1">
                   <Label text="Sleep Duration" sub="Hours per night" />
-                  <input 
-                    type="number" 
-                    name="sleep_hours_per_night" 
-                    value={formData.sleep_hours_per_night} 
-                    onChange={handleChange} 
-                    className={`${inputClasses('sleep_hours_per_night')} max-w-[120px]`} 
+                  <input
+                    type="number"
+                    name="sleep_hours_per_night"
+                    value={getNumericValue(formData.sleep_hours_per_night)}
+                    onChange={handleChange}
+                    className={`${inputClasses('sleep_hours_per_night')} max-w-[120px]`}
                   />
                 </div>
                 <div className="space-y-1">

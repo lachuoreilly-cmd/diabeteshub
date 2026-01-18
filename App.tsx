@@ -27,7 +27,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initSession = async () => {
-      await db.seed();
       const activeUser = await db.getCurrentUser();
       if (activeUser) {
         setUser(activeUser);

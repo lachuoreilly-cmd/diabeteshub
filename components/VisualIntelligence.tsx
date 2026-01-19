@@ -7,7 +7,7 @@ import {
   Layout, Type, CheckCircle2, ChevronRight,
   RefreshCw, Scan, Beaker, Wand2
 } from 'lucide-react';
-import { analyzeImage, generateHealthImage, generateExerciseVideo } from '../services/geminiService';
+import { analyzeImage, generateExerciseIllustration, generateExerciseVideo } from '../services/geminiService';
 
 const VisualIntelligence: React.FC = () => {
   const [activeTool, setActiveTool] = useState<'vision' | 'studio' | 'motion'>('vision');
@@ -75,7 +75,7 @@ const VisualIntelligence: React.FC = () => {
     
     setLoading(true);
     try {
-      const img = await generateHealthImage(genPrompt, imageSize);
+      const img = await generateExerciseIllustration(genPrompt, imageSize);
       setResult(img);
     } catch (e: any) {
       console.error(e);

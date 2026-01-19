@@ -1,14 +1,67 @@
 
 import React, { useState } from 'react';
-import { 
-  BookOpen, Activity, Zap, ShieldCheck, HeartPulse, Apple, Dumbbell, 
-  Droplets, HelpCircle, ChevronDown, ChevronUp, Info, Microscope, 
-  Target, Play, CheckCircle2, AlertCircle, XCircle, Star, Sparkles, 
+import {
+  BookOpen, Activity, Zap, ShieldCheck, HeartPulse, Apple, Dumbbell,
+  Droplets, HelpCircle, ChevronDown, ChevronUp, Info, Microscope,
+  Target, Play, CheckCircle2, AlertCircle, XCircle, Star, Sparkles,
   ArrowRight, Award, Coffee, Carrot, ChevronRight, TrendingUp, X,
   Search, ExternalLink, Loader2, Scale, Youtube, Video, Copy, Maximize2,
   AlertTriangle, FileText
 } from 'lucide-react';
 import { getFoodGIInfo, findEducationalVideos } from '../services/geminiService';
+
+// --- START OF FIX ---
+
+// Interface for the final, parsed data structure for rendering
+interface ParsedSource {
+    hostname: string;
+    uri: string;
+    isYoutube: boolean;
+}
+interface ParsedVideoResult {
+    summary: string;
+    sources: ParsedSource[];
+}
+
+/**
+ * Parses the raw text response from the AI into a structured object.
+ * @param text The raw string response from the geminiService.
+ * @returns A ParsedVideoResult object or null if parsing fails.
+ */
+const parseAIResponse = (text: string): ParsedVideoResult | null => {
+    if (!text || typeof text !== 'string') {
+        return null;
+    }
+
+    // Split the text to find all links, which are formatted as markdown links.
+    const linkRegex = /\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+    const sources: ParsedSource[] = [];
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+        try {
+            const uri = match[1];
+            const hostname = new URL(uri).hostname.replace(/^www\./, '');
+            const isYoutube = hostname.includes('youtube.com') || hostname.includes('youtu.be');
+            sources.push({ hostname, uri, isYoutube });
+        } catch (e) {
+            console.error('Invalid URL found in AI response:', match[1]);
+        }
+    }
+
+    // Assume the text before the first "###" or the first link is the summary.
+    const summaryEndIndex = text.search(/(###|\[.*?\]\()/);
+    const summary = summaryEndIndex !== -1 ? text.substring(0, summaryEndIndex).trim() : text.trim();
+
+    // Clean up asterisks and extra whitespace from the summary.
+    const cleanedSummary = summary.replace(/\*\*/g, '').replace(/\s+/g, ' ');
+
+    return { summary: cleanedSummary, sources };
+};
+
+
+// --- END OF FIX ---
+
 
 const Education: React.FC = () => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -19,7 +72,11 @@ const Education: React.FC = () => {
   // AI Video Discovery State
   const [videoQuery, setVideoQuery] = useState('');
   const [isFindingVideos, setIsFindingVideos] = useState(false);
-  const [videoResults, setVideoResults] = useState<any>(null);
+  
+  // --- START OF FIX ---
+  // Use the new, structured state type
+  const [videoResults, setVideoResults] = useState<ParsedVideoResult | null>(null);
+  // --- END OF FIX ---
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -43,11 +100,17 @@ const Education: React.FC = () => {
     e.preventDefault();
     if (!videoQuery.trim()) return;
     setIsFindingVideos(true);
+    setVideoResults(null);
     try {
-      const result = await findEducationalVideos(videoQuery);
-      setVideoResults(result);
+      // --- START OF FIX ---
+      // Fetch the raw text and then parse it
+      const rawResult = await findEducationalVideos(videoQuery);
+      const parsedData = parseAIResponse(rawResult.text);
+      setVideoResults(parsedData);
+      // --- END OF FIX ---
     } catch (err) {
       console.error(err);
+      // Optionally set an error state here to show in the UI
     } finally {
       setIsFindingVideos(false);
     }
@@ -100,7 +163,7 @@ const Education: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4">
         <div className="bg-slate-900 rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border border-white/10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-          
+
           <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <div className="inline-flex items-center space-x-3 text-blue-400 font-black uppercase text-xs tracking-[0.2em]">
@@ -115,7 +178,7 @@ const Education: React.FC = () => {
               </p>
 
               <form onSubmit={handleFindVideos} className="relative group">
-                <input 
+                <input
                   type="text"
                   value={videoQuery}
                   onChange={(e) => setVideoQuery(e.target.value)}
@@ -123,7 +186,7 @@ const Education: React.FC = () => {
                   className="w-full pl-14 pr-32 py-5 bg-white/5 border-2 border-white/10 rounded-[2rem] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-lg text-white placeholder:text-slate-500"
                 />
                 <Youtube className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-red-500 transition-colors w-6 h-6" />
-                <button 
+                <button
                   disabled={isFindingVideos}
                   className="absolute right-2 top-2 bottom-2 px-8 bg-blue-600 text-white rounded-[1.75rem] font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50"
                 >
@@ -132,40 +195,47 @@ const Education: React.FC = () => {
               </form>
             </div>
 
+            {/* --- START OF FIX: Updated Rendering Logic --- */}
             <div className="min-h-[400px]">
-              {videoResults ? (
+              {isFindingVideos && (
+                 <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30 border-2 border-dashed border-white/10 rounded-[3rem] p-12">
+                   <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
+                      <Microscope className="w-10 h-10 animate-pulse" />
+                   </div>
+                   <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Scanning clinical databases...</p>
+                </div>
+              )}
+
+              {!isFindingVideos && videoResults && (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
-                  <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
-                     <p className="text-sm font-medium text-slate-300 italic mb-4">"{videoResults.text.split('\n')[0]}"</p>
-                     <div className="space-y-4">
-                        {videoResults.sources.map((source: any, idx: number) => {
-                          const isYoutube = source.web?.uri?.includes('youtube.com') || source.web?.uri?.includes('youtu.be');
-                          return source.web && (
-                            <a 
-                              key={idx} 
-                              href={source.web.uri}
+                  <div className="p-6 bg-transparent">
+                     <p className="text-base font-medium text-slate-300 mb-6">"{videoResults.summary}"</p>
+                     <div className="space-y-3">
+                        {videoResults.sources.map((source, idx) => (
+                            <a
+                              key={idx}
+                              href={source.uri}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="group p-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all flex items-center justify-between"
                             >
                               <div className="flex-grow pr-4">
-                                <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{source.web.title || 'Educational Resource'}</h4>
+                                <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{source.hostname}</h4>
                                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                                  {isYoutube ? 'Watch on YouTube' : 'Read Full Article'}
+                                  {source.isYoutube ? 'Watch on YouTube' : 'Read Full Article'}
                                 </p>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <div className={`shrink-0 p-3 rounded-xl group-hover:scale-110 transition-transform shadow-lg ${isYoutube ? 'bg-red-600 shadow-red-500/20' : 'bg-blue-600 shadow-blue-500/20'}`}>
-                                  {isYoutube ? <Play className="w-5 h-5 text-white fill-white" /> : <FileText className="w-5 h-5 text-white" />}
-                                </div>
+                              <div className={`shrink-0 p-3 rounded-xl group-hover:scale-110 transition-transform shadow-lg ${source.isYoutube ? 'bg-red-600 shadow-red-500/20' : 'bg-blue-600 shadow-blue-500/20'}`}>
+                                {source.isYoutube ? <Play className="w-5 h-5 text-white fill-white" /> : <FileText className="w-5 h-5 text-white" />}
                               </div>
                             </a>
-                          );
-                        })}
+                        ))}
                      </div>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {!isFindingVideos && !videoResults && (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30 border-2 border-dashed border-white/10 rounded-[3rem] p-12">
                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
                       <Microscope className="w-10 h-10" />
@@ -174,15 +244,19 @@ const Education: React.FC = () => {
                 </div>
               )}
             </div>
+            {/* --- END OF FIX --- */}
+
           </div>
         </div>
       </section>
+
+      {/* --- NO CHANGES BELOW THIS LINE --- */}
 
       {/* Metabolic Food Explorer SECTION */}
       <section className="max-w-7xl mx-auto px-4 relative">
         <div className="bg-blue-50/50 rounded-[4rem] shadow-sm border border-blue-100 p-8 md:p-16 relative overflow-hidden transition-colors">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white via-transparent to-transparent pointer-events-none"></div>
-          
+
           <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <div className="inline-flex items-center space-x-3 text-blue-600 font-black uppercase text-xs tracking-widest">
@@ -197,7 +271,7 @@ const Education: React.FC = () => {
               </p>
 
               <form onSubmit={handleSearch} className="relative group">
-                <input 
+                <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -205,7 +279,7 @@ const Education: React.FC = () => {
                   className="w-full pl-14 pr-32 py-5 bg-white border-2 border-slate-100 rounded-[2rem] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-lg text-slate-900"
                 />
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-6 h-6" />
-                <button 
+                <button
                   disabled={isSearching}
                   className="absolute right-2 top-2 bottom-2 px-8 bg-blue-600 text-white rounded-[1.75rem] font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50"
                 >
@@ -216,7 +290,7 @@ const Education: React.FC = () => {
               <div className="flex flex-wrap gap-4">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Try searching:</span>
                 {['Chickpeas', 'Pasta', 'Mango', 'Greek Yogurt'].map(tag => (
-                  <button 
+                  <button
                     key={tag}
                     onClick={() => setSearchQuery(tag)}
                     className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline"
@@ -231,7 +305,7 @@ const Education: React.FC = () => {
               {searchResult ? (
                 <div className="w-full bg-white rounded-[3rem] p-8 md:p-12 text-slate-900 shadow-2xl border border-blue-50 relative overflow-hidden animate-in zoom-in-95 duration-500">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2"></div>
-                  
+
                   <div className="relative z-10 space-y-8">
                     <div className="flex justify-between items-start">
                       <div>
@@ -274,14 +348,13 @@ const Education: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Display grounding sources as required by guidelines */}
                     {searchResult.sources && searchResult.sources.length > 0 && (
                       <div className="mt-6 pt-6 border-t border-slate-100">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Verified Sources</p>
                         <div className="flex flex-wrap gap-2">
                           {searchResult.sources.map((source: any, idx: number) => (
                             source.web && (
-                              <a 
+                              <a
                                 key={idx}
                                 href={source.web.uri}
                                 target="_blank"
@@ -322,7 +395,7 @@ const Education: React.FC = () => {
           <div className="space-y-4">
             {faqs.map((faq, index) => (
               <div key={index} className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm transition-colors">
-                <button 
+                <button
                   onClick={() => toggleFaq(index)}
                   className="w-full flex items-center justify-between p-8 text-left outline-none hover:bg-blue-50/30 transition-colors"
                 >

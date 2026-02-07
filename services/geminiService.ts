@@ -1,15 +1,28 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { HealthData, AssessmentResult, DiabetesStatus, RiskLevel, MealLog, RecipeRecommendation, ExercisePlan } from "../types";
 
-// Always use the recommended initialization with the API key from environment variables.
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Resolve API key in both client (Vite) and server envs.
+const resolveApiKey = () => {
+  const viteKey = (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_API_KEY) ? (import.meta as any).env.VITE_API_KEY : undefined;
+  let nodeKey: string | undefined;
+  try { nodeKey = (typeof process !== 'undefined' && (process as any)?.env) ? (process as any).env.API_KEY : undefined; } catch (e) { nodeKey = undefined; }
+  return viteKey || nodeKey;
+};
+
+// Dynamically import the SDK at runtime to avoid bundling Node-only code into the browser.
+export const getAI = async () => {
+  const apiKey = resolveApiKey();
+  if (!apiKey) throw new Error('Missing API key: set VITE_API_KEY in .env (client) or API_KEY in env (server).');
+  const genai = await import('@google/genai');
+  const GoogleGenAI = genai.GoogleGenAI;
+  return new GoogleGenAI({ apiKey });
+};
 
 /**
  * Generate a standard quality exercise illustration using gemini-2.5-flash-image.
  * This is faster and suitable for real-time instructional visual aids.
  */
 export async function generateExerciseIllustration(exerciseName: string): Promise<string> {
-  const ai = getAI();
+  const ai = await getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: {
@@ -38,7 +51,7 @@ export async function generateExerciseIllustration(exerciseName: string): Promis
  * Find educational videos about a health topic using Google Search grounding.
  */
 export async function findEducationalVideos(topic: string) {
-  const ai = getAI();
+  const ai = await getAI();
   const prompt = `
     Summarize current medical consensus and find high-quality educational VIDEOS on YouTube about: "${topic}".
     Focus grounding EXCLUSIVELY on youtube.com and established medical portals.
@@ -64,7 +77,7 @@ export async function findEducationalVideos(topic: string) {
  * Analyze an image for clinical relevance using vision capabilities.
  */
 export async function analyzeImage(base64: string, mimeType: string): Promise<string> {
-  const ai = getAI();
+  const ai = await getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: {
@@ -88,7 +101,7 @@ export async function analyzeImage(base64: string, mimeType: string): Promise<st
  * Generate a high-quality health-related illustration.
  */
 export async function generateHealthImage(prompt: string, imageSize: "1K" | "2K" | "4K"): Promise<string> {
-  const ai = getAI();
+  const ai = await getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-image-preview',
     contents: {
@@ -118,7 +131,7 @@ export async function generateHealthImage(prompt: string, imageSize: "1K" | "2K"
  * Generate an instructional exercise video using the Veo model.
  */
 export async function generateExerciseVideo(base64: string, mimeType: string, prompt: string): Promise<string> {
-  const ai = getAI();
+  const ai = await getAI();
   let operation = await ai.models.generateVideos({
     model: 'veo-3.1-fast-generate-preview',
     prompt: `An instructional health video demonstrating ${prompt} starting from the provided frame. Focus on smooth, correct clinical form.`,
@@ -141,7 +154,12 @@ export async function generateExerciseVideo(base64: string, mimeType: string, pr
   const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
   if (!downloadLink) throw new Error("Video generation failed to return a download link.");
 
-  const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+  // Use the same key resolution as getAI so we don't reference process.env directly in the browser
+  const viteKey = (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_API_KEY) ? (import.meta as any).env.VITE_API_KEY : undefined;
+  let nodeKey: string | undefined;
+  try { nodeKey = (typeof process !== 'undefined' && (process as any)?.env) ? (process as any).env.API_KEY : undefined; } catch (e) { nodeKey = undefined; }
+  const apiKey = viteKey || nodeKey;
+  const videoResponse = await fetch(`${downloadLink}&key=${apiKey}`);
   const blob = await videoResponse.blob();
   return URL.createObjectURL(blob);
 }
@@ -150,7 +168,8 @@ export async function generateExerciseVideo(base64: string, mimeType: string, pr
  * Generate personalized exercise plans based on health assessment.
  */
 export async function getPersonalizedExercisePlans(assessment: AssessmentResult, age: number, equipment: string[]): Promise<ExercisePlan[]> {
-  const ai = getAI();
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
   const prompt = `
     Generate 3 distinct exercise plans for a user with the following metabolic profile:
     - Status: ${assessment.status}
@@ -227,7 +246,8 @@ export async function getPersonalizedExercisePlans(assessment: AssessmentResult,
  * Get Glycemic Index information for a specific food using Google Search grounding.
  */
 export async function getFoodGIInfo(foodName: string) {
-  const ai = getAI();
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
   const prompt = `Analyze Glycemic Index (GI) for: "${foodName}". Provide category, GI value, reasoning, and metabolic hack.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -261,7 +281,8 @@ export async function getFoodGIInfo(foodName: string) {
  * Suggest ethnic recipes based on dietary preferences.
  */
 export async function getEthnicMealRecommendations(ethnicity: string, preference: string): Promise<RecipeRecommendation[]> {
-  const ai = getAI();
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
   const prompt = `Suggest healthy, diabetic-friendly recipes for ${ethnicity} cuisine with ${preference} preference.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -300,7 +321,8 @@ export async function getEthnicMealRecommendations(ethnicity: string, preference
  * Analyze a specific meal for nutritional impact.
  */
 export async function analyzeMeal(description: string, userStatus?: string): Promise<NonNullable<MealLog['analysis']>> {
-  const ai = getAI();
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
   const prompt = `Analyze meal: "${description}". Context: ${userStatus || 'general'}. Provide nutritional data and diabetic suggestions.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -329,7 +351,8 @@ export async function analyzeMeal(description: string, userStatus?: string): Pro
  * Perform a comprehensive health data assessment and risk forecast.
  */
 export async function analyzeHealthData(data: HealthData): Promise<AssessmentResult> {
-  const ai = getAI();
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
   const weightKg = data.weightLbs * 0.453592;
   const totalInches = (data.heightFeet * 12) + data.heightInches;
   const heightCm = totalInches * 2.54;

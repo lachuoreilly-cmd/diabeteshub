@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { MessageSquare, Bot, Send, Sparkles, User, Loader2, Info, ArrowLeft, RefreshCcw, Lightbulb, Apple, Dumbbell } from 'lucide-react';
+import { getAI } from '../services/geminiService';
 import { User as UserType, Profile } from '../types';
 
 interface Message {
@@ -37,9 +37,16 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      let ai;
+      try {
+        ai = await getAI();
+      } catch (initErr) {
+        console.error('AI initialization error:', initErr);
+        setMessages(prev => [...prev, { role: 'model', text: "The health coach cannot start because the AI API key is missing or invalid. Please check app configuration." }]);
+        setIsLoading(false);
+        return;
+      }
       const latestAssessment = activeProfile?.history[0];
-      
       const systemInstruction = `
         You are a professional, empathetic, and knowledgeable Diabetes Health Coach. 
         Context: The user is named ${user?.name || 'Guest'}. 
@@ -52,20 +59,25 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
         3. ALWAYS include a small disclaimer that you are an educational tool.
       `;
 
-      const chat = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        config: {
-          systemInstruction,
-        }
-      });
+      const chat = ai.chats.create({ model: 'gemini-3-flash-preview', config: { systemInstruction } });
 
-      const response = await chat.sendMessage({ message: userMessage });
-      const responseText = response.text || "I couldn't process that. Please try rephrasing.";
-      
+      // Protect against long SDK lazy-loads by racing with a timeout
+      const sendPromise = chat.sendMessage({ message: userMessage });
+      const timeoutMs = 12000; // 12s
+      const response = await Promise.race([
+        sendPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('AI SDK timed out while sending message')), timeoutMs))
+      ]);
+      const responseText = response?.text || "I couldn't process that. Please try rephrasing.";
       setMessages(prev => [...prev, { role: 'model', text: responseText }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Coach error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to my knowledge base. Please try again." }]);
+      const message = error?.message || String(error);
+      if (message.includes('timed out') || message.includes('SDK')) {
+        setMessages(prev => [...prev, { role: 'model', text: "The Health Coach is taking longer than expected to respond. Please check your network or try again shortly." }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to my knowledge base. Please try again." }]);
+      }
     } finally {
       setIsLoading(false);
     }

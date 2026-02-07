@@ -174,9 +174,21 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     e.preventDefault();
     if (step !== 5) return;
 
-    const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-    if (!hasKey) {
-      await (window as any).aistudio.openSelectKey();
+    // Guard AI Studio SDK usage — it won't be available in local dev browsers.
+    const aistudio = (window as any)?.aistudio;
+    if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
+      try {
+        const hasKey = await aistudio.hasSelectedApiKey();
+        if (!hasKey && typeof aistudio.openSelectKey === 'function') {
+          await aistudio.openSelectKey();
+        }
+      } catch (sdkErr) {
+        // If SDK call fails, log and continue — we still allow local testing.
+        console.info('AI Studio SDK check failed, continuing locally:', sdkErr);
+      }
+    } else {
+      // Not running inside AI Studio — proceed without SDK key selection.
+      console.info('AI Studio SDK not available; proceeding without selecting API key.');
     }
     
     setLoading(true);
@@ -188,7 +200,9 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
       console.error(error);
       if (error?.message?.includes("Requested entity was not found.")) {
          alert("API Key error. Please select a valid key from a paid project (ai.google.dev/gemini-api/docs/billing).");
-         await (window as any).aistudio.openSelectKey();
+         if ((window as any)?.aistudio && typeof (window as any).aistudio.openSelectKey === 'function') {
+           await (window as any).aistudio.openSelectKey();
+         }
       } else {
          alert("Analysis failed. Please try again.");
       }

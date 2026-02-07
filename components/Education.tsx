@@ -174,7 +174,7 @@ const Education: React.FC = () => {
                 Discover Specialized <br />Clinical Insights.
               </h2>
               <p className="text-lg text-slate-400 font-medium leading-relaxed">
-                Our AI scans the web for the most accurate educational content, prioritizing top-tier US institutions like the American Diabetes Association (ADA), CDC, and Cleveland Clinic.
+                Our AI scans YouTube for the most recent and accurate educational content, prioritizing top-tier US institutions like the American Diabetes Association (ADA), CDC, and Cleveland Clinic.
               </p>
 
               <form onSubmit={handleFindVideos} className="relative group">

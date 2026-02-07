@@ -1,268 +1,418 @@
+import { HealthData, AssessmentResult, DiabetesStatus, RiskLevel, MealLog, RecipeRecommendation, ExercisePlan } from "../types";
 
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, GenerationConfig, Content, Tool } from "@google/generative-ai";
-import { HealthData, AssessmentResult, DiabetesStatus, RiskLevel, MealLog, RecipeRecommendation, ExercisePlan, Citation } from "../types";
-
-// Helper to get the Generative AI instance, ensuring API key is available.
-const getGenAI = () => {
-    // Vite uses import.meta.env for environment variables
-    const apiKey = import.meta.env.VITE_API_KEY;
-    if (!apiKey) {
-        console.error("VITE_API_KEY is not set in the environment.");
-        // Throw an error to halt execution if the key is missing
-        throw new Error("VITE_API_KEY is not set.");
-    }
-    return new GoogleGenerativeAI(apiKey);
+// Resolve API key in both client (Vite) and server envs.
+const resolveApiKey = () => {
+  const viteKey = (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_API_KEY) ? (import.meta as any).env.VITE_API_KEY : undefined;
+  let nodeKey: string | undefined;
+  try { nodeKey = (typeof process !== 'undefined' && (process as any)?.env) ? (process as any).env.API_KEY : undefined; } catch (e) { nodeKey = undefined; }
+  return viteKey || nodeKey;
 };
 
-// Converts a URL to a Generative AI File object (browser-safe)
-async function urlToGenerativeFile(url: string, mimeType: string) {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    // Browser-safe ArrayBuffer to Base64 conversion
-    const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-    return {
-        inlineData: {
-            data: base64,
-            mimeType
-        },
-    };
-}
+// Dynamically import the SDK at runtime to avoid bundling Node-only code into the browser.
+export const getAI = async () => {
+  const apiKey = resolveApiKey();
+  if (!apiKey) throw new Error('Missing API key: set VITE_API_KEY in .env (client) or API_KEY in env (server).');
+  const genai = await import('@google/genai');
+  const GoogleGenAI = genai.GoogleGenAI;
+  return new GoogleGenAI({ apiKey });
+};
 
-export async function analyzeHealthData(data: HealthData): Promise<AssessmentResult> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
-
-    const weightKg = data.weightLbs * 0.453592;
-    const totalInches = (data.heightFeet * 12) + data.heightInches;
-    const heightM = totalInches * 0.0254;
-    const bmi = parseFloat((weightKg / (heightM * heightM)).toFixed(1));
-
-    const prompt = `
-        **Analyze the following health data to perform a diabetes risk assessment.**
-        **Patient Data:**
-        - Age: ${data.age}, Gender: ${data.gender}, Ethnicity: ${data.ethnicity}
-        - BMI: ${bmi}
-        - Blood Pressure: ${data.systolicBP}/${data.diastolicBP}
-        - HbA1c: ${data.hba1c || 'Not provided'}
-        - Family History: ${data.familyHistory ? 'Yes' : 'No'}
-        - Lifestyle: Smoking (${data.smoking_status}), Alcohol (${data.alcohol_consumption})
-        - Scores (1-100): Diet Quality (${data.diet_quality_score}), Sleep Quality (${data.sleep_quality_score})
-        - Exercise: ${data.exerciseFrequency}
-        - Symptoms: ${data.symptoms.join(', ') || 'None'}
-        **Instructions:**
-        1. Assess Status (e.g., Normal, Pre-diabetic) & Risk Level (Low, Medium, High).
-        2. Identify top 3-5 key risk factors.
-        3. Justify your assessment.
-        4. If HbA1c is missing, predict it. If present, confirm its alignment.
-        5. Develop a concise action plan (diet, exercise, next steps).
-        6. Provide specific, bulleted recommendations.
-        **Return a valid JSON object. Do not include markdown.**
+/**
+ * Generate a standard quality exercise illustration using gemini-2.5-flash-image.
+ * This is faster and suitable for real-time instructional visual aids.
+ */
+export async function generateExerciseIllustration(exerciseName: string): Promise<string> {
+  const ai = await getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [
         {
-          "status": "string", "riskLevel": "string", "risks": ["string"], "justification": "string",
-          "predictedHbA1c": "string", "predictedGlucose": { "fasting": "string", "postprandial": "string" },
-          "actionPlan": { "dietPlan": "string", "exercisePlan": "string", "immediateNextSteps": ["string"] },
-          "recommendations": { "diet": ["string"], "exercise": ["string"], "lifestyle": ["string"] }
-        }
-    `;
-    
-    const generationConfig: GenerationConfig = {
-      responseMimeType: "application/json",
-      temperature: 0.2,
-    };
-
-    const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig,
-    });
-
-    const rawJson = JSON.parse(result.response.text());
-    return {
-        id: Math.random().toString(36).substr(2, 9),
-        date: new Date().toISOString(),
-        bmi: bmi,
-        status: rawJson.status as DiabetesStatus,
-        riskLevel: rawJson.riskLevel as RiskLevel,
-        risks: rawJson.risks,
-        justification: rawJson.justification,
-        predictedHbA1c: rawJson.predictedHbA1c,
-        predictedGlucose: rawJson.predictedGlucose,
-        actionPlan: rawJson.actionPlan,
-        recommendations: rawJson.recommendations,
-    };
-}
-
-export async function analyzeImage(base64Data: string, mimeType: string, customPrompt?: string): Promise<string> {
-  const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-  const prompt = customPrompt || "Analyze this image for metabolic health. If food, estimate nutrition and glycemic load. If a label, extract key data.";
-  const imagePart = { inlineData: { data: base64Data, mimeType } };
-  const result = await model.generateContent([prompt, imagePart]);
-  return result.response.text();
-}
-
-export async function getPersonalizedExercisePlans(assessment: AssessmentResult, age: number, equipment: string[]): Promise<ExercisePlan[]> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
-    const prompt = `
-        Generate 3 distinct weekly exercise plans for a user with:
-        - **Profile:** ${assessment.status}, ${assessment.riskLevel} risk, BMI ${assessment.bmi}, Age ${age}.
-        - **Equipment:** ${equipment.join(', ') || 'Bodyweight only'}.
-        **Requirements:**
-        1. **Goal:** Improve insulin sensitivity and support weight management.
-        2. **Intensity:** Must be appropriate for the user\'s risk level (e.g., low-impact for high-risk).
-        3. **Structure:** Each plan needs a name, intensity, benefits, and a full 7-day schedule.
-        4. **Variety:** Plans should be different (e.g., cardio-focused, strength-focused, hybrid).
-        **Return a valid JSON object as {"plans": [...]}. Do not use markdown.**
-    `;
-    const generationConfig: GenerationConfig = { responseMimeType: "application/json", temperature: 0.7 };
-    try {
-        const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig });
-        const parsed = JSON.parse(result.response.text());
-        return parsed.plans || [];
-    } catch (e) {
-        console.error("Failed to parse JSON for exercise plans:", e);
-        return [];
+          text: `A clear, clinical, 2D vector illustration of a person correctly performing the exercise: ${exerciseName}. White background, professional medical style, emphasizing proper form and metabolic safety.`,
+        },
+      ],
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: "1:1"
+      }
     }
-}
+  });
 
-export async function analyzeMeal(description: string, userStatus?: string): Promise<NonNullable<MealLog['analysis']>> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
-    const prompt = `
-        Analyze meal: "${description}" for a user with context: ${userStatus || 'General wellness'}.
-        **Instructions:**
-        1. Estimate nutrition: calories, carbs (g), protein (g), fat (g).
-        2. Assess Glycemic Impact: 'Low', 'Medium', or 'High'.
-        3. Score healthiness (1-100).
-        4. Suggest a brief, actionable improvement.
-        **Return a valid JSON object. No markdown.**
-        { "calories": number, "carbs": number, "protein": number, "fat": number, "qualityScore": number, "glycemicImpact": "string", "suggestions": "string" }
-    `;
-    const generationConfig: GenerationConfig = { responseMimeType: "application/json", temperature: 0.3 };
-    try {
-        const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig });
-        return JSON.parse(result.response.text());
-    } catch (error) {
-        console.error("Error analyzing meal:", error);
-        return { calories: 0, carbs: 0, protein: 0, fat: 0, qualityScore: 0, glycemicImpact: 'Unknown', suggestions: 'Could not analyze meal.' };
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
     }
-}
-
-export async function getFoodGIInfo(foodName: string): Promise<{ data: any; sources: Citation[] }> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview", tools: [{ googleSearch: {} }] });
-    const prompt = `Analyze Glycemic Index (GI) and nutritional profile for: "${foodName}". Use real-world data. Provide name, GI category ('Low', 'Medium', 'High'), GI value, reasoning, a metabolic hack, carbs/serving, and fiber content.`;
-    const generationConfig: GenerationConfig = { responseMimeType: "application/json", temperature: 0.2 };
-    try {
-        const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig });
-        const response = result.response;
-        const responseText = response.text();
-        const grounding = response.candidates?.[0]?.citationMetadata?.citationSources || [];
-        return { data: JSON.parse(responseText), sources: grounding };
-    } catch (error) {
-        console.error("Error in getFoodGIInfo:", error);
-        return { data: {}, sources: [] };
-    }
-}
-
-export async function findEducationalVideos(topic: string): Promise<{ text: string; sources: Citation[] }> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview", tools: [{ googleSearch: {} }] });
-    const prompt = `Find 3-5 high-quality, scientifically accurate YouTube videos about: "${topic}". Prioritize content from major US medical organizations (e.g., ADA, CDC, Mayo Clinic). Return a brief summary and list the video sources.`;
-    const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-    const response = result.response;
-    const text = response.text();
-    const grounding = response.candidates?.[0]?.citationMetadata?.citationSources || [];
-    const youtubeSources = grounding.filter(source => source.uri?.includes('youtube.com') || source.uri?.includes('youtu.be'));
-    return { text: text, sources: youtubeSources };
+  }
+  throw new Error("Image generation failed.");
 }
 
 /**
- * Generates a standard quality exercise illustration using a text-to-image model.
- * This is faster and suitable for real-time instructional visual aids.
+ * Find educational videos about a health topic using Google Search grounding.
  */
-export async function generateExerciseIllustration(exerciseName: string, imageSize: "1K" | "2K" | "4K"): Promise<string> {
-  const genAI = getGenAI();
-  // Using gemini-2.5-flash-image as requested by the user.
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" }); 
-  
-  const prompt = `A clear, clinical, 2D vector illustration of a person correctly performing the exercise: ${exerciseName}. White background, professional medical style, emphasizing proper form and metabolic safety. The image should be high-resolution, corresponding to a quality of at least ${imageSize}.`;
+export async function findEducationalVideos(topic: string) {
+  const ai = await getAI();
+  const prompt = `
+    Summarize current medical consensus and find high-quality, RECENT educational VIDEOS on YouTube about: "${topic}".
+    Focus grounding EXCLUSIVELY on youtube.com and established medical portals.
+    Return only videos published in the last 2 years.
+    Keep the summary concise.
+  `;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    
-    // Check for image data in the response candidates' parts, which is the standard structure for recent SDKs.
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (parts) {
-        for (const part of parts) {
-            // The image data is expected in \`inlineData\`.
-            if (part.inlineData && part.inlineData.mimeType.startsWith('image/')) {
-                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-            }
-        }
-    }
-    
-    // Fallback for a hypothetical direct 'images' array in the response.
-    const images = (response as any).images;
-    if (images && images[0]?.base64) {
-      return `data:image/png;base64,${images[0].base64}`;
-    }
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      tools: [{ googleSearch: {} }],
+      thinkingConfig: { thinkingBudget: 0 }
+    },
+  });
 
-    // If no image is found, throw an error.
-    console.error("Image generation returned no image data. Response text:", response.text());
-    throw new Error("Image generation failed: No image data returned from the model.");
-
-  } catch(e) {
-      console.error("Image generation failed with 'gemini-2.5-flash-image':", e);
-      if (e instanceof Error && (e.message.includes("API key not valid") || e.message.includes("permission"))) {
-           throw new Error("Your API Key may not be valid for 'gemini-2.5-flash-image'. Please ensure your key is from a project with the 'Vertex AI API' enabled and has the correct permissions.");
-      }
-      throw new Error("Image generation failed. Please check the model name and your API key permissions.");
-  }
-}
-
-export async function getEthnicMealRecommendations(ethnicity: string, preference: string): Promise<RecipeRecommendation[]> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
-    const prompt = `
-        Suggest 5 healthy, diabetic-friendly recipes for ${ethnicity} cuisine with a ${preference} preference.
-        For each recipe, provide: name, session (Breakfast, Lunch, Dinner), cookingTime, ingredients, instructions, nutrients overview, reasoning for metabolic health, and a youtubeSearchUrl.
-        **Return a valid JSON object as {"meals": [...]}. Do not use markdown.**
-    `;
-    const generationConfig: GenerationConfig = { responseMimeType: "application/json", temperature: 0.8 };
-    try {
-        const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig });
-        const parsed = JSON.parse(result.response.text());
-        return parsed.meals || [];
-    } catch (e) {
-        console.error("Failed to parse JSON for ethnic meals:", e);
-        return [];
-    }
-}
-
-export async function generateExerciseVideo(base64Data: string, mimeType: string, exerciseName: string): Promise<string> {
-  const genAI = getGenAI();
-  const model = genAI.getGenerativeModel({ model: "veo-2-large" });
-
-  const videoPart = {
-    inlineData: {
-      data: base64Data,
-      mimeType
-    }
+  return {
+    text: response.text,
+    sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
   };
+}
 
-  const prompt = `Animate the person in this image to demonstrate the correct form for ${exerciseName}. The video should be a short, looping clip that clearly shows the primary motion of the exercise.`;
+/**
+ * Analyze an image for clinical relevance using vision capabilities.
+ */
+export async function analyzeImage(base64: string, mimeType: string): Promise<string> {
+  const ai = await getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: {
+      parts: [
+        {
+          inlineData: {
+            data: base64,
+            mimeType: mimeType,
+          },
+        },
+        {
+          text: 'Analyze this image for clinical relevance to diabetes management (e.g., food, medical equipment, or health logs). Provide a detailed, medically informative, and empathetic report.',
+        },
+      ],
+    },
+  });
+  return response.text || "No analysis available.";
+}
 
-  const result = await model.generateContent([prompt, videoPart]);
-  const response = result.response;
+/**
+ * Generate a high-quality health-related illustration.
+ */
+export async function generateHealthImage(prompt: string, imageSize: "1K" | "2K" | "4K"): Promise<string> {
+  const ai = await getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-image-preview',
+    contents: {
+      parts: [
+        {
+          text: `Professional clinical illustration: ${prompt}. Anatomically accurate, high quality, medical textbook style.`,
+        },
+      ],
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: "16:9",
+        imageSize: imageSize
+      },
+    },
+  });
 
-  const videoUrl = (response as any).videoUrl;
-
-  if (videoUrl) {
-    return videoUrl;
-  } else {
-    throw new Error("Video generation failed or returned no URL.");
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
   }
+  throw new Error("Image generation failed to return data.");
+}
+
+/**
+ * Generate an instructional exercise video using the Veo model.
+ */
+export async function generateExerciseVideo(base64: string, mimeType: string, prompt: string): Promise<string> {
+  const ai = await getAI();
+  let operation = await ai.models.generateVideos({
+    model: 'veo-3.1-fast-generate-preview',
+    prompt: `An instructional health video demonstrating ${prompt} starting from the provided frame. Focus on smooth, correct clinical form.`,
+    image: {
+      imageBytes: base64,
+      mimeType: mimeType,
+    },
+    config: {
+      numberOfVideos: 1,
+      resolution: '720p',
+      aspectRatio: '16:9'
+    }
+  });
+
+  while (!operation.done) {
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    operation = await ai.operations.getVideosOperation({ operation: operation });
+  }
+
+  const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+  if (!downloadLink) throw new Error("Video generation failed to return a download link.");
+
+  // Use the same key resolution as getAI so we don't reference process.env directly in the browser
+  const viteKey = (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_API_KEY) ? (import.meta as any).env.VITE_API_KEY : undefined;
+  let nodeKey: string | undefined;
+  try { nodeKey = (typeof process !== 'undefined' && (process as any)?.env) ? (process as any).env.API_KEY : undefined; } catch (e) { nodeKey = undefined; }
+  const apiKey = viteKey || nodeKey;
+  const videoResponse = await fetch(`${downloadLink}&key=${apiKey}`);
+  const blob = await videoResponse.blob();
+  return URL.createObjectURL(blob);
+}
+
+/**
+ * Generate personalized exercise plans based on health assessment.
+ */
+export async function getPersonalizedExercisePlans(assessment: AssessmentResult, age: number, equipment: string[]): Promise<ExercisePlan[]> {
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
+  const prompt = `
+    Generate 3 distinct exercise plans for a user with the following metabolic profile:
+    - Status: ${assessment.status}
+    - Risk Level: ${assessment.riskLevel}
+    - BMI: ${assessment.bmi}
+    - Age: ${age}
+    - Available Equipment: ${equipment.join(', ') || 'None (Bodyweight only)'}
+
+    Requirements:
+    1. Each plan must focus on improving insulin sensitivity and glucose uptake.
+    2. Intensity must be appropriate for the risk level.
+    3. Provide clear benefit descriptions.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          plans: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                name: { type: Type.STRING },
+                intensity: { type: Type.STRING, enum: ['Low', 'Moderate', 'High'] },
+                durationMinutes: { type: Type.NUMBER },
+                frequencyPerWeek: { type: Type.NUMBER },
+                benefits: { type: Type.STRING },
+                equipmentNeeded: { type: Type.ARRAY, items: { type: Type.STRING } },
+                exercises: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      durationSeconds: { type: Type.NUMBER },
+                      restSeconds: { type: Type.NUMBER },
+                      type: { type: Type.STRING, enum: ['exercise', 'rest'] }
+                    },
+                    required: ["name", "durationSeconds", "restSeconds", "type"]
+                  }
+                },
+                weeklySchedule: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      day: { type: Type.STRING },
+                      activity: { type: Type.STRING },
+                      notes: { type: Type.STRING }
+                    },
+                    required: ["day", "activity", "notes"]
+                  }
+                }
+              },
+              required: ["id", "name", "intensity", "durationMinutes", "frequencyPerWeek", "benefits", "equipmentNeeded", "exercises", "weeklySchedule"]
+            }
+          }
+        },
+        required: ["plans"]
+      }
+    }
+  });
+
+  return JSON.parse(response.text).plans;
+}
+
+/**
+ * Get Glycemic Index information for a specific food using Google Search grounding.
+ */
+export async function getFoodGIInfo(foodName: string) {
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
+  const prompt = `Analyze Glycemic Index (GI) for: "${foodName}". Provide category, GI value, reasoning, and metabolic hack.`;
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      tools: [{ googleSearch: {} }],
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          food: { type: Type.STRING },
+          category: { type: Type.STRING },
+          giValue: { type: Type.NUMBER },
+          reasoning: { type: Type.STRING },
+          metabolicHack: { type: Type.STRING },
+          carbsPerServing: { type: Type.STRING },
+          fiberContent: { type: Type.STRING }
+        },
+        required: ["food", "category", "giValue", "reasoning", "metabolicHack"]
+      },
+      thinkingConfig: { thinkingBudget: 0 }
+    }
+  });
+  return {
+    data: JSON.parse(response.text),
+    sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
+  };
+}
+
+/**
+ * Suggest ethnic recipes based on dietary preferences.
+ */
+export async function getEthnicMealRecommendations(ethnicity: string, preference: string): Promise<RecipeRecommendation[]> {
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
+  const prompt = `Suggest healthy, diabetic-friendly recipes for ${ethnicity} cuisine with ${preference} preference.`;
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          meals: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                session: { type: Type.STRING },
+                cookingTime: { type: Type.STRING },
+                ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                instructions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                nutrients: { type: Type.STRING },
+                reasoning: { type: Type.STRING },
+                youtubeSearchUrl: { type: Type.STRING }
+              },
+              required: ["name", "session", "cookingTime", "ingredients", "instructions", "nutrients", "reasoning", "youtubeSearchUrl"]
+            }
+          }
+        },
+        required: ["meals"]
+      }
+    }
+  });
+  return JSON.parse(response.text).meals;
+}
+
+/**
+ * Analyze a specific meal for nutritional impact.
+ */
+export async function analyzeMeal(description: string, userStatus?: string): Promise<NonNullable<MealLog['analysis']>> {
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
+  const prompt = `Analyze meal: "${description}". Context: ${userStatus || 'general'}. Provide nutritional data and diabetic suggestions.`;
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          calories: { type: Type.NUMBER },
+          carbs: { type: Type.NUMBER },
+          protein: { type: Type.NUMBER },
+          fat: { type: Type.NUMBER },
+          qualityScore: { type: Type.NUMBER },
+          glycemicImpact: { type: Type.STRING },
+          suggestions: { type: Type.STRING }
+        },
+        required: ["calories", "carbs", "protein", "fat", "glycemicImpact", "suggestions", "qualityScore"]
+      }
+    }
+  });
+  return JSON.parse(response.text);
+}
+
+/**
+ * Perform a comprehensive health data assessment and risk forecast.
+ */
+export async function analyzeHealthData(data: HealthData): Promise<AssessmentResult> {
+  const ai = await getAI();
+    const { Type } = await import('@google/genai');
+  const weightKg = data.weightLbs * 0.453592;
+  const totalInches = (data.heightFeet * 12) + data.heightInches;
+  const heightCm = totalInches * 2.54;
+  const bmi = parseFloat((weightKg / ((heightCm / 100) ** 2)).toFixed(1));
+  const prompt = `Perform professional diabetes risk assessment for: BMI ${bmi}, Age ${data.age}, HbA1c ${data.hba1c || 'None'}. Provide a structured report including status, risk level, and action plans.`;
+  const response = await ai.models.generateContent({
+    model: "gemini-3-pro-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          status: { type: Type.STRING },
+          riskLevel: { type: Type.STRING },
+          risks: { type: Type.ARRAY, items: { type: Type.STRING } },
+          justification: { type: Type.STRING },
+          predictedHbA1c: { type: Type.STRING },
+          predictedGlucose: {
+            type: Type.OBJECT,
+            properties: { fasting: { type: Type.STRING }, postprandial: { type: Type.STRING } },
+            required: ["fasting", "postprandial"]
+          },
+          actionPlan: {
+            type: Type.OBJECT,
+            properties: {
+              dietPlan: { type: Type.STRING },
+              exercisePlan: { type: Type.STRING },
+              immediateNextSteps: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["dietPlan", "exercisePlan", "immediateNextSteps"]
+          },
+          recommendations: {
+            type: Type.OBJECT,
+            properties: {
+              diet: { type: Type.ARRAY, items: { type: Type.STRING } },
+              exercise: { type: Type.ARRAY, items: { type: Type.STRING } },
+              lifestyle: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["diet", "exercise", "lifestyle"]
+          }
+        },
+        required: ["status", "riskLevel", "risks", "justification", "predictedHbA1c", "predictedGlucose", "actionPlan", "recommendations"]
+      },
+      thinkingConfig: { thinkingBudget: 32768 }
+    },
+  });
+  const rawJson = JSON.parse(response.text);
+  return {
+    id: Math.random().toString(36).substr(2, 9),
+    date: new Date().toISOString(),
+    status: rawJson.status as DiabetesStatus,
+    riskLevel: rawJson.riskLevel as RiskLevel,
+    risks: rawJson.risks,
+    justification: rawJson.justification,
+    predictedHbA1c: rawJson.predictedHbA1c,
+    predictedGlucose: rawJson.predictedGlucose,
+    actionPlan: rawJson.actionPlan,
+    recommendations: rawJson.recommendations,
+    bmi: bmi
+  };
 }

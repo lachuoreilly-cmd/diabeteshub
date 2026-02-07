@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { MessageSquare, Bot, Send, Sparkles, User, Loader2, Info, ArrowLeft, RefreshCcw, Lightbulb, Apple, Dumbbell } from 'lucide-react';
+import { getAI } from '../services/geminiService';
 import { User as UserType, Profile } from '../types';
 
 interface Message {
@@ -33,85 +33,61 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
 
     const userMessage = input.trim();
     setInput('');
-    const currentMessages = [...messages, { role: 'user', text: userMessage }];
-    setMessages(currentMessages);
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
     setIsLoading(true);
 
     try {
-      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        await (window as any).aistudio.openSelectKey();
+      let ai;
+      try {
+        ai = await getAI();
+      } catch (initErr) {
+        console.error('AI initialization error:', initErr);
+        setMessages(prev => [...prev, { role: 'model', text: "The health coach cannot start because the AI API key is missing or invalid. Please check app configuration." }]);
+        setIsLoading(false);
+        return;
       }
-
-      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY);
       const latestAssessment = activeProfile?.history[0];
-      
       const systemInstruction = `
-        You are a professional, empathetic, and knowledgeable Diabetes Health Coach. Your goal is to provide safe, helpful, and accurate advice.
+        You are a professional, empathetic, and knowledgeable Diabetes Health Coach. 
+        Context: The user is named ${user?.name || 'Guest'}. 
+        Health Status: ${latestAssessment ? latestAssessment.status : 'Unknown'}.
+        Last BMI: ${latestAssessment ? latestAssessment.bmi : 'Not recorded'}.
         
-        User Context:
-        - Name: ${user?.name || 'Guest'}
-        - Last Assessed Metabolic Status: ${latestAssessment ? latestAssessment.status : 'Unknown'}
-        - Last Recorded BMI: ${latestAssessment ? latestAssessment.bmi : 'Not recorded'}
-
-        Operational Guidelines:
-        1.  **Evidence-Based & Safe:** All advice MUST be based on established medical evidence and safety guidelines. Prioritize user well-being above all.
-        2.  **Simple & Accurate:** Explain complex topics in simple, easy-to-understand language without sacrificing medical accuracy.
-        3.  **Empathetic & Supportive:** Use a supportive and encouraging tone. Acknowledge the user's feelings and challenges.
-        4.  **Actionable Advice:** Provide concrete, actionable steps the user can take (e.g., "Try adding a handful of spinach to your next meal" instead of "Eat more vegetables").
-        5.  **Educational Disclaimer:** ALWAYS conclude your response with a small disclaimer: "Remember, I am an AI educational tool. Always consult with a qualified healthcare professional for medical advice."
-        6.  **Scope Limitation:** Do not provide diagnoses, prescribe medication, or give advice that should only come from a doctor. If asked, gently redirect the user to their physician.
+        Guidelines:
+        1. Provide evidence-based advice on diet, exercise, and lifestyle.
+        2. Keep explanations simple but medically accurate.
+        3. ALWAYS include a small disclaimer that you are an educational tool.
       `;
 
-      const model = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
-        systemInstruction: systemInstruction,
-      });
+      const chat = ai.chats.create({ model: 'gemini-3-flash-preview', config: { systemInstruction } });
 
-      const chatHistory = messages.map(msg => ({
-        role: msg.role,
-        parts: [{ text: msg.text }]
-      }));
-
-      const chat = model.startChat({
-        history: chatHistory,
-        generationConfig: {
-          temperature: 0.8,
-          topP: 0.9,
-          maxOutputTokens: 1000,
-        },
-        safetySettings: [
-            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        ]
-      });
-      
-      const result = await chat.sendMessage(userMessage);
-      const response = result.response;
-      const responseText = response.text();
-      
+      // Protect against long SDK lazy-loads by racing with a timeout
+      const sendPromise = chat.sendMessage({ message: userMessage });
+      const timeoutMs = 12000; // 12s
+      const response = await Promise.race([
+        sendPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('AI SDK timed out while sending message')), timeoutMs))
+      ]);
+      const responseText = response?.text || "I couldn't process that. Please try rephrasing.";
       setMessages(prev => [...prev, { role: 'model', text: responseText }]);
     } catch (error: any) {
       console.error("Coach error:", error);
-      let errorMessage = "I'm having trouble connecting to my knowledge base. Please try again.";
-      if (error?.message?.includes("API key not valid")) {
-        errorMessage = "Your API Key is not valid. Please select a valid key from a paid project (ai.google.dev/gemini-api/docs/billing).";
-        (window as any).aistudio.openSelectKey();
+      const message = error?.message || String(error);
+      if (message.includes('timed out') || message.includes('SDK')) {
+        setMessages(prev => [...prev, { role: 'model', text: "The Health Coach is taking longer than expected to respond. Please check your network or try again shortly." }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to my knowledge base. Please try again." }]);
       }
-      setMessages(prev => [...prev, { role: 'model', text: errorMessage }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 h-[calc(100vh-5rem)] flex flex-col animate-in fade-in duration-500 bg-white">
-      <div className="bg-white rounded-[2.5rem] border border-blue-100 shadow-sm overflow-hidden flex flex-col flex-grow">
+    <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col animate-in fade-in duration-500 bg-white">
+      <div className="bg-white rounded-[2.5rem] border border-blue-100 shadow-sm overflow-hidden flex flex-col h-[650px] max-h-[80vh]">
         {/* Header */}
-        <div className="bg-blue-50 p-6 flex items-center justify-between text-slate-900 border-b border-blue-100">
+        <div className="bg-blue-50 p-6 flex items-center justify-between text-slate-900 border-b border-blue-100 shrink-0">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
               <Bot className="w-7 h-7 text-white" />
@@ -151,7 +127,7 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
         </div>
 
         {/* Footer Area */}
-        <div className="p-6 bg-white border-t border-blue-50">
+        <div className="p-6 bg-white border-t border-blue-50 shrink-0">
           <div className="relative">
             <input 
               value={input}
@@ -169,6 +145,24 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
             </button>
           </div>
         </div>
+      </div>
+      
+      {/* Quick Suggestions - Fixed beneath chat to provide instant value */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button onClick={() => setInput("What are low-GI breakfast options?")} className="p-4 bg-slate-50 hover:bg-blue-50 border border-slate-100 rounded-2xl text-left transition-colors group">
+           <div className="flex items-center space-x-2 text-blue-600 mb-1">
+             <Apple className="w-4 h-4" />
+             <span className="text-[10px] font-black uppercase tracking-widest">Nutrition</span>
+           </div>
+           <p className="text-xs font-bold text-slate-600 group-hover:text-blue-700">Explore low-GI breakfast ideas...</p>
+        </button>
+        <button onClick={() => setInput("How does a 15-minute walk help my blood sugar?")} className="p-4 bg-slate-50 hover:bg-blue-50 border border-slate-100 rounded-2xl text-left transition-colors group">
+           <div className="flex items-center space-x-2 text-indigo-600 mb-1">
+             <Dumbbell className="w-4 h-4" />
+             <span className="text-[10px] font-black uppercase tracking-widest">Activity</span>
+           </div>
+           <p className="text-xs font-bold text-slate-600 group-hover:text-indigo-700">Benefits of post-meal walks...</p>
+        </button>
       </div>
     </div>
   );

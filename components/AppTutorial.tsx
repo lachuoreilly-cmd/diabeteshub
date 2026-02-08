@@ -60,7 +60,7 @@ const AppTutorial: React.FC = () => {
     },
     {
       title: "Custom Workouts",
-      description: "Browse dozens of exercise plans tailored to your available equipment and metabolic needs. Add them to your routine.",
+      description: "Browse exercise plans tailored to your available equipment and metabolic needs. Add them to your routine.",
       route: "/action-plan",
       icon: <Dumbbell className="w-8 h-8 text-blue-600" />
     },
@@ -128,7 +128,6 @@ const AppTutorial: React.FC = () => {
         <div className="p-6 md:p-8 space-y-6">
           <div className="flex justify-between items-start">
              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center shadow-inner">
-               {/* Fix: Use isValidElement and any cast to resolve cloneElement className prop error */}
                {React.isValidElement(steps[step].icon) ? React.cloneElement(steps[step].icon as React.ReactElement<any>, { className: 'w-6 h-6' }) : steps[step].icon}
              </div>
              <button onClick={() => setActive(false)} className="p-2 hover:bg-slate-50 rounded-lg transition-colors">

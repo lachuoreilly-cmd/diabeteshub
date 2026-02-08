@@ -92,7 +92,7 @@ class DatabaseService {
     const newUser: User = {
       id: firebaseUser.uid,
       name,
-      email: email.toLowerCase(),
+      email: sanitizedEmail,
       profiles: [this.createProfile(name, false)],
       activeProfileId: 'default'
     };

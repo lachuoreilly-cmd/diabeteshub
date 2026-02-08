@@ -222,12 +222,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     );
   }
 
-  const inputClasses = (name: string, fontSize: 'text-xl' | 'text-base' = 'text-xl') => `w-full px-5 py-4 rounded-xl border bg-white text-slate-900 outline-none transition-all font-bold ${fontSize} ${
+  const inputClasses = (name: string, fontSize: 'text-xl' | 'text-base' = 'text-xl') => `w-full px-3 py-2 sm:px-5 sm:py-3 rounded-lg border bg-white text-slate-900 outline-none transition-all font-bold ${fontSize} ${
     errors[name] ? 'border-slate-800 ring-2 ring-slate-800/10' : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5'
   }`;
 
   const Label = ({ text, sub }: { text: string, sub?: string }) => (
-    <div className="mb-3 min-h-[44px]">
+    <div className="mb-2 sm:mb-3 min-h-[36px] sm:min-h-[44px]">
       <p className="text-sm font-bold text-slate-700 uppercase tracking-wide">{text}</p>
       {sub && <p className="text-xs text-slate-500 font-medium mt-1 leading-tight">{sub}</p>}
     </div>
@@ -237,7 +237,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     <div className="max-w-7xl mx-auto px-4 py-12 bg-white">
       <div className="bg-blue-50/30 rounded-[3rem] shadow-sm overflow-hidden border border-blue-100">
         {/* Header */}
-        <div className="bg-white border-b border-blue-50 px-8 py-10">
+  <div className="bg-white border-b border-blue-50 px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="text-center md:text-left">
               <h2 className="text-3xl font-black tracking-tight text-slate-900">Health Intake Engine</h2>
@@ -256,7 +256,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 lg:p-14">
+  <form onSubmit={handleSubmit} className="p-6 sm:p-8 lg:p-14">
           {/* STEP 1: Biometrics & Anthropometrics */}
           {step === 1 && (
             <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
@@ -333,7 +333,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     <Label text="Family History" sub="T2D in first-degree relative?" />
                     <div className="flex gap-4">
                       {[true, false].map((val) => (
-                        <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-5 rounded-2xl font-black text-lg border transition-all ${formData.familyHistory === val ? 'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-100' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
+                        <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-2 sm:py-4 rounded-2xl font-black text-base sm:text-lg border transition-all ${formData.familyHistory === val ? 'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-100' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
                           {val ? 'Yes' : 'No'}
                         </button>
                       ))}

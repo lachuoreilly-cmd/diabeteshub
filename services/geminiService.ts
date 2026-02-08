@@ -53,7 +53,7 @@ export async function generateExerciseIllustration(exerciseName: string): Promis
 export async function findEducationalVideos(topic: string) {
   const ai = await getAI();
   const prompt = `
-    Summarize current medical consensus and find high-quality, RECENT educational VIDEOS on YouTube about: "${topic}".
+    Summarize current medical consensus and find high-quality, RECENT educational VIDEOS on YouTube about: \"${topic}\".
     Focus grounding EXCLUSIVELY on youtube.com and established medical portals.
     Return only videos published in the last 2 years.
     Keep the summary concise.
@@ -170,7 +170,7 @@ export async function generateExerciseVideo(base64: string, mimeType: string, pr
  */
 export async function getPersonalizedExercisePlans(assessment: AssessmentResult, age: number, equipment: string[]): Promise<ExercisePlan[]> {
   const ai = await getAI();
-    const { Type } = await import('@google/genai');
+  const { Type } = await import('@google/genai');
   const prompt = `
     Generate 3 distinct exercise plans for a user with the following metabolic profile:
     - Status: ${assessment.status}
@@ -248,8 +248,8 @@ export async function getPersonalizedExercisePlans(assessment: AssessmentResult,
  */
 export async function getFoodGIInfo(foodName: string) {
   const ai = await getAI();
-    const { Type } = await import('@google/genai');
-  const prompt = `Analyze Glycemic Index (GI) for: "${foodName}". Provide category, GI value, reasoning, and metabolic hack.`;
+  const { Type } = await import('@google/genai');
+  const prompt = `Analyze Glycemic Index (GI) for: \"${foodName}\". Provide category, GI value, reasoning, and metabolic hack.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
@@ -283,7 +283,7 @@ export async function getFoodGIInfo(foodName: string) {
  */
 export async function getEthnicMealRecommendations(ethnicity: string, preference: string): Promise<RecipeRecommendation[]> {
   const ai = await getAI();
-    const { Type } = await import('@google/genai');
+  const { Type } = await import('@google/genai');
   const prompt = `Suggest healthy, diabetic-friendly recipes for ${ethnicity} cuisine with ${preference} preference.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -323,8 +323,8 @@ export async function getEthnicMealRecommendations(ethnicity: string, preference
  */
 export async function analyzeMeal(description: string, userStatus?: string): Promise<NonNullable<MealLog['analysis']>> {
   const ai = await getAI();
-    const { Type } = await import('@google/genai');
-  const prompt = `Analyze meal: "${description}". Context: ${userStatus || 'general'}. Provide nutritional data and diabetic suggestions.`;
+  const { Type } = await import('@google/genai');
+  const prompt = `Analyze meal: \"${description}\". Context: ${userStatus || 'general'}. Provide nutritional data and diabetic suggestions.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
@@ -353,7 +353,7 @@ export async function analyzeMeal(description: string, userStatus?: string): Pro
  */
 export async function analyzeHealthData(data: HealthData): Promise<AssessmentResult> {
   const ai = await getAI();
-    const { Type } = await import('@google/genai');
+  const { Type } = await import('@google/genai');
   const weightKg = data.weightLbs * 0.453592;
   const totalInches = (data.heightFeet * 12) + data.heightInches;
   const heightCm = totalInches * 2.54;

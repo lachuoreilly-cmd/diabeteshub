@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   Activity, LayoutDashboard, History as HistoryIcon, LogOut, Home, 
   BookOpen, Bot, ClipboardList, TrendingUp, Cloud, Menu, X, ChevronRight,
-  Settings, User as UserIcon, Wand2
+  User as UserIcon
 } from 'lucide-react';
 import { User, Profile } from '../types';
 import Logo from './Logo';
@@ -28,9 +28,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
 
   if (user) {
     navLinks.splice(1, 0, { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard });
-    navLinks.splice(2, 0, { path: '/media-lab', label: 'Media Lab', icon: Wand2 });
-    navLinks.splice(3, 0, { path: '/action-plan', label: 'Health Plan', icon: ClipboardList });
-    navLinks.splice(4, 0, { path: '/insights', label: 'Insights', icon: TrendingUp });
+    navLinks.splice(2, 0, { path: '/action-plan', label: 'Health Plan', icon: ClipboardList });
+    navLinks.splice(3, 0, { path: '/insights', label: 'Insights', icon: TrendingUp });
     navLinks.push({ path: '/history', label: 'Records', icon: HistoryIcon });
   }
 

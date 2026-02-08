@@ -28,6 +28,47 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
     }
   }, [messages, isLoading]);
 
+  // Lightweight, safe-ish markdown -> HTML renderer to avoid adding a new dependency.
+  // Covers headings (###), bold (**text**), italic (*text*), unordered lists (- or *),
+  // and paragraphs / line breaks. Escapes HTML to reduce XSS risk.
+  const escapeHtml = (unsafe: string) => {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const renderMarkdown = (md: string) => {
+    if (!md) return '';
+    // Normalize line endings
+    let out = escapeHtml(md);
+
+    // Headings: ###
+    out = out.replace(/^###\s*(.+)$/gim, '<h4 class="text-sm font-black text-slate-700 mt-4 mb-2">$1</h4>');
+    out = out.replace(/^##\s*(.+)$/gim, '<h3 class="text-base font-black text-slate-800 mt-4 mb-2">$1</h3>');
+    out = out.replace(/^#\s*(.+)$/gim, '<h2 class="text-lg font-black text-slate-900 mt-4 mb-2">$1</h2>');
+
+    // Bold and italic (handle bold first)
+    out = out.replace(/\*\*([^\*]+)\*\*/gim, '<strong class="font-black">$1</strong>');
+    out = out.replace(/\*([^\*]+)\*/gim, '<em class="italic">$1</em>');
+
+    // Unordered lists: lines starting with - or *
+    // Convert consecutive list lines into a single <ul>
+    out = out.replace(/(^|\n)([ \t]*([-\*])\s+.+(\n[ \t]*([-\*])\s+.+)*)/gim, (match) => {
+      const items = match.split(/\n/).map(l => l.replace(/^\s*([-\*])\s+/, '').trim()).filter(Boolean);
+      if (!items.length) return match;
+      return '\n<ul class="list-disc list-inside mt-2 mb-2">' + items.map(i => `<li class="text-sm leading-relaxed">${i}</li>`).join('') + '</ul>\n';
+    });
+
+    // Paragraphs: split on two or more newlines
+    const paragraphs = out.split(/\n{2,}/g).map(p => p.trim()).filter(Boolean);
+    out = paragraphs.map(p => `<p class="text-sm text-slate-700 leading-relaxed mb-3">${p.replace(/\n/g, '<br/>')}</p>`).join('');
+
+    return out;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -112,7 +153,11 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
               <div className={`p-4 rounded-[2rem] text-sm font-medium leading-relaxed max-w-[85%] ${
                 msg.role === 'user' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-800 border border-blue-50 shadow-sm'
               }`}>
-                {msg.text}
+                {msg.role === 'user' ? (
+                  msg.text
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
+                )}
               </div>
             </div>
           ))}

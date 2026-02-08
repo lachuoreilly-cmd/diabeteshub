@@ -290,16 +290,17 @@ const Education: React.FC = () => {
                      </div>
                   </div>
                 </div>
-              )}
+              ) : (
 
-              {!isFindingVideos && !videoResults && (
+              !isFindingVideos && !videoResults && (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30 border-2 border-dashed border-white/10 rounded-[3rem] p-12">
                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
                       <Microscope className="w-10 h-10" />
                    </div>
                    <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Awaiting Search Command...</p>
                 </div>
-              )}
+              )
+            )}
             </div>
             {/* --- END OF FIX --- */}
 

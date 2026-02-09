@@ -61,7 +61,7 @@ class DatabaseService {
       myExercisePlans: [],
       exerciseSessions: [],
       savedRecipes: [],
-      hba1cHistory: isDemo ? [{ date: now.toISOString(), value: 5.7 }] : [],
+      hba1cHistory: isDemo ? [{ date: new Date().toISOString(), value: 5.7 }] : [],
       currentMedications: []
     };
   }
@@ -86,34 +86,62 @@ class DatabaseService {
   }
 
   public async register(name: string, email: string): Promise<User> {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, 'password');
-    const firebaseUser = userCredential.user;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, 'password');
+      const firebaseUser = userCredential.user;
 
-    const newUser: User = {
-      id: firebaseUser.uid,
-      name,
-      email: sanitizedEmail,
-      profiles: [this.createProfile(name, false)],
-      activeProfileId: 'default'
-    };
+      const newUser: User = {
+        id: firebaseUser.uid,
+        name: name,
+        email: email,
+        profiles: [this.createProfile(name, false)],
+        activeProfileId: 'default'
+      };
 
-    await setDoc(doc(this.usersCollection, firebaseUser.uid), newUser);
-    return newUser;
+      await setDoc(doc(this.usersCollection, firebaseUser.uid), newUser);
+      return newUser;
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('An account with this email address already exists.');
+      } else {
+        throw new Error('An unexpected error occurred while creating your account. Please try again later.');
+      }
+    }
   }
 
     public async login(email: string): Promise<User> {
         const userCredential = await signInWithEmailAndPassword(auth, email, 'password');
         const firebaseUser = userCredential.user;
 
-        let userDoc;
         if (email.toLowerCase() === 'demo@diabetes-companion.ai') {
-            userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
-        } else {
-            userDoc = await getDoc(doc(this.usersCollection, firebaseUser.uid));
+            let userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
+            if (!userDoc.exists()) {
+                await this.seed();
+                userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
+                if (!userDoc.exists()) {
+                    throw new Error("Demo user record not found and could not be created.");
+                }
+            }
+            return userDoc.data() as User;
         }
 
+        const userDocRef = doc(this.usersCollection, firebaseUser.uid);
+        let userDoc = await getDoc(userDocRef);
+
         if (!userDoc.exists()) {
-            throw new Error("The requested health record was not found in our system.");
+            const namePrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User';
+            const name = firebaseUser.displayName || (namePrefix.charAt(0).toUpperCase() + namePrefix.slice(1));
+            
+            const newUser: User = {
+                id: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email!,
+                profiles: [this.createProfile(name, false)],
+                activeProfileId: 'default'
+            };
+
+            await setDoc(userDocRef, newUser);
+            return newUser;
         }
 
         return userDoc.data() as User;

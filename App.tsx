@@ -36,6 +36,12 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (user && window.location.hash === '#/auth') {
+      window.location.href = '#/dashboard';
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');

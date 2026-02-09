@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { db } from '../services/database';
 import { User } from '../types';
-import { Mail, Lock, ArrowRight, Loader2, Database, Info, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2, Info, ShieldCheck } from 'lucide-react';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -14,7 +13,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serverStatus, setServerStatus] = useState<'connecting' | 'online'>('online');
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +32,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         user = await db.register(derivedName, cleanEmail);
       }
       onLogin(user);
-      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || "Connection refused. Please try again.");
     } finally {

@@ -237,7 +237,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     <div className="max-w-7xl mx-auto px-4 py-12 bg-white">
       <div className="bg-blue-50/30 rounded-[3rem] shadow-sm overflow-hidden border border-blue-100">
         {/* Header */}
-  <div className="bg-white border-b border-blue-50 px-6 py-6 sm:px-8 sm:py-8">
+        <div className="bg-white border-b border-blue-50 px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="text-center md:text-left">
               <h2 className="text-3xl font-black tracking-tight text-slate-900">Health Intake Engine</h2>

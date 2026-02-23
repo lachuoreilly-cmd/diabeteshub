@@ -109,58 +109,68 @@ class DatabaseService {
     }
   }
 
-    public async login(email: string): Promise<User> {
-        const userCredential = await signInWithEmailAndPassword(auth, email, 'password');
-        const firebaseUser = userCredential.user;
+  public async login(email: string): Promise<User> {
+    const userCredential = await signInWithEmailAndPassword(auth, email, 'password');
+    const firebaseUser = userCredential.user;
 
-        if (email.toLowerCase() === 'demo@diabetes-companion.ai') {
-            let userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
-            if (!userDoc.exists()) {
-                await this.seed();
-                userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
-                if (!userDoc.exists()) {
-                    throw new Error("Demo user record not found and could not be created.");
-                }
-            }
-            return userDoc.data() as User;
-        }
-
-        const userDocRef = doc(this.usersCollection, firebaseUser.uid);
-        let userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-            const namePrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User';
-            const name = firebaseUser.displayName || (namePrefix.charAt(0).toUpperCase() + namePrefix.slice(1));
-            
-            const newUser: User = {
-                id: firebaseUser.uid,
-                name: name,
-                email: firebaseUser.email!,
-                profiles: [this.createProfile(name, false)],
-                activeProfileId: 'default'
-            };
-
-            await setDoc(userDocRef, newUser);
-            return newUser;
-        }
-
-        return userDoc.data() as User;
+    if (email.toLowerCase() === 'demo@diabetes-companion.ai') {
+      let userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
+      if (!userDoc.exists()) {
+        await this.seed();
+        userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
+      }
+      return userDoc.data() as User;
     }
+
+    const userDocRef = doc(this.usersCollection, firebaseUser.uid);
+    let userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      const namePrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User';
+      const name = firebaseUser.displayName || (namePrefix.charAt(0).toUpperCase() + namePrefix.slice(1));
+      
+      const newUser: User = {
+        id: firebaseUser.uid,
+        name: name,
+        email: firebaseUser.email!,
+        profiles: [this.createProfile(name, false)],
+        activeProfileId: 'default'
+      };
+
+      await setDoc(userDocRef, newUser);
+      return newUser;
+    }
+
+    let userData = userDoc.data() as User;
+    if (!userData.profiles || userData.profiles.length === 0 || !userData.activeProfileId) {
+        const name = userData.name || (userData.email ? userData.email.split('@')[0] : 'User');
+        userData.profiles = [this.createProfile(name, false)];
+        userData.activeProfileId = 'default';
+        await setDoc(userDocRef, userData, { merge: true });
+    }
+
+    return userData;
+  }
 
   public getCurrentUser(): Promise<User | null> {
     return new Promise((resolve) => {
       onAuthStateChanged(auth, async (firebaseUser: FirebaseAuthUser | null) => {
         if (firebaseUser) {
-          let userDoc;
-          // Special handling for the demo user session restoration
-          if (firebaseUser.email === 'demo@diabetes-companion.ai') {
-            userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
-          } else {
-            userDoc = await getDoc(doc(this.usersCollection, firebaseUser.uid));
-          }
+          const userDocRef = firebaseUser.email === 'demo@diabetes-companion.ai' 
+            ? doc(this.usersCollection, 'demo-user') 
+            : doc(this.usersCollection, firebaseUser.uid);
+          
+          const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            resolve(userDoc.data() as User);
+            let userData = userDoc.data() as User;
+            if (!userData.profiles || userData.profiles.length === 0 || !userData.activeProfileId) {
+              const name = userData.name || (userData.email ? userData.email.split('@')[0] : 'User');
+              userData.profiles = [this.createProfile(name, false)];
+              userData.activeProfileId = 'default';
+              await setDoc(userDocRef, userData, { merge: true });
+            }
+            resolve(userData);
           } else {
             resolve(null);
           }

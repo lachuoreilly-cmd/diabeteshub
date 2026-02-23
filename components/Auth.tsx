@@ -19,19 +19,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     setError(null);
     setLoading(true);
     
-    // Sanitize input
     const cleanEmail = email.trim();
 
     try {
-      let user: User;
       if (isLogin) {
-        user = await db.login(cleanEmail);
+        const user = await db.login(cleanEmail);
+        onLogin(user);
       } else {
         const namePrefix = cleanEmail.split('@')[0];
         const derivedName = namePrefix.charAt(0).toUpperCase() + namePrefix.slice(1);
-        user = await db.register(derivedName, cleanEmail);
+        const newUser = await db.register(derivedName, cleanEmail);
+        onLogin({ ...newUser, id: newUser.id, name: newUser.name, email: newUser.email, profiles: newUser.profiles, activeProfileId: 'default' });
       }
-      onLogin(user);
     } catch (err: any) {
       setError(err.message || "Connection refused. Please try again.");
     } finally {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -13,6 +12,7 @@ import ActionPlan from './components/ActionPlan';
 import LifestyleInsights from './components/LifestyleInsights';
 import AppTutorial from './components/AppTutorial';
 import BrandBanner from './components/BrandBanner';
+import InactivityTimeout from './components/InactivityTimeout';
 import { db } from './services/database';
 import { User, AssessmentResult, Profile, HealthData } from './types';
 
@@ -23,6 +23,7 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+  const [guestResult, setGuestResult] = useState<{ result: AssessmentResult, data: HealthData } | null>(null);
 
   useEffect(() => {
     const initSession = async () => {
@@ -53,8 +54,17 @@ const App: React.FC = () => {
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
+  const handleLogin = async (userData: User) => {
+    if (guestResult) {
+        await addResultToHistory(guestResult.result, guestResult.data, userData);
+        const updatedUser = await db.getCurrentUser();
+        if (updatedUser) {
+            setUser(updatedUser);
+        }
+        setGuestResult(null);
+    } else {
+        setUser(userData);
+    }
   };
 
   const handleLogout = async () => {
@@ -70,25 +80,34 @@ const App: React.FC = () => {
     }
   };
 
-  const updateActiveProfile = async (profileUpdate: Partial<Profile>) => {
-    if (user) {
-      const updatedProfiles = user.profiles.map(p => 
-        p.id === user.activeProfileId ? { ...p, ...profileUpdate } : p
-      );
-      await updateUser({ profiles: updatedProfiles });
+  const updateActiveProfile = async (profileUpdate: Partial<Profile>, targetUser: User | null = user) => {
+    if (targetUser) {
+        const updatedProfiles = targetUser.profiles.map(p => 
+            p.id === targetUser.activeProfileId ? { ...p, ...profileUpdate } : p
+        );
+        const updatedUser = { ...targetUser, profiles: updatedProfiles };
+        await db.updateUser(updatedUser);
+        
+        // Re-fetch user to ensure state is fresh
+        if (user && updatedUser.id === user.id) {
+            const freshUser = await db.getCurrentUser();
+            setUser(freshUser);
+        }
     }
   };
 
-  const addResultToHistory = async (result: AssessmentResult, data: HealthData) => {
-    if (user) {
-      const profile = user.profiles.find(p => p.id === user.activeProfileId);
-      if (profile) {
-        await updateActiveProfile({ 
-          history: [result, ...profile.history],
-          ethnicity: data.ethnicity,
-          dietPreference: data.dietPreference
-        });
-      }
+  const addResultToHistory = async (result: AssessmentResult, data: HealthData, targetUser: User | null = user) => {
+    if (targetUser) {
+        const profile = targetUser.profiles.find(p => p.id === targetUser.activeProfileId);
+        if (profile) {
+            await updateActiveProfile({ 
+                history: [result, ...profile.history],
+                ethnicity: data.ethnicity,
+                dietPreference: data.dietPreference
+            }, targetUser);
+        }
+    } else {
+        setGuestResult({ result, data });
     }
   };
 
@@ -111,6 +130,7 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
+      {user && <InactivityTimeout onTimeout={handleLogout} />}
       <div className="min-h-screen bg-white transition-colors duration-300 flex overflow-x-hidden">
         <Navbar 
           user={user} 
@@ -150,7 +170,7 @@ const App: React.FC = () => {
                  <code className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">demo@diabetes-companion.ai</code>
               </div>
 
-              <p className="text-sm font-bold text-slate-600">© 2026 Diabetes Companion. Your metabolic command center.</p>
+              <p className="text-sm font-bold text-slate-600"> 2026 Diabetes Companion. Your metabolic command center.</p>
               <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold max-w-2xl mx-auto leading-relaxed">
                 Medical Disclaimer: This application is for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always seek clinical advice from a professional.
               </p>

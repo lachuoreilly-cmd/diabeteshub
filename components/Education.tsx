@@ -8,7 +8,7 @@ import {
   Search, ExternalLink, Loader2, Scale, Youtube, Video, Copy, Maximize2,
   AlertTriangle, FileText, Globe
 } from 'lucide-react';
-import { getFoodGIInfo, findEducationalVideos } from '../services/geminiService';
+import { getFoodGIInfo, findEducationalArticles } from '../services/geminiService';
 
 // --- START OF FIX ---
 
@@ -16,9 +16,8 @@ import { getFoodGIInfo, findEducationalVideos } from '../services/geminiService'
 interface ParsedSource {
     hostname: string;
     uri: string;
-    isYoutube: boolean;
 }
-interface ParsedVideoResult {
+interface ParsedArticleResult {
     summary: string;
     sources: ParsedSource[];
 }
@@ -26,9 +25,9 @@ interface ParsedVideoResult {
 /**
  * Parses the raw text response from the AI into a structured object.
  * @param text The raw string response from the geminiService.
- * @returns A ParsedVideoResult object or null if parsing fails.
+ * @returns A ParsedArticleResult object or null if parsing fails.
  */
-const parseAIResponse = (text: string): ParsedVideoResult | null => {
+const parseAIResponse = (text: string): ParsedArticleResult | null => {
     if (!text || typeof text !== 'string') {
         return null;
     }
@@ -42,8 +41,7 @@ const parseAIResponse = (text: string): ParsedVideoResult | null => {
         try {
             const uri = match[1];
             const hostname = new URL(uri).hostname.replace(/^www\./, '');
-            const isYoutube = hostname.includes('youtube.com') || hostname.includes('youtu.be');
-            sources.push({ hostname, uri, isYoutube });
+            sources.push({ hostname, uri });
         } catch (e) {
             console.error('Invalid URL found in AI response:', match[1]);
         }
@@ -58,9 +56,8 @@ const parseAIResponse = (text: string): ParsedVideoResult | null => {
 
     return { summary: cleanedSummary, sources };
 };
-
-
 // --- END OF FIX ---
+
 
 
 const Education: React.FC = () => {
@@ -69,24 +66,24 @@ const Education: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
 
-  // AI Video Discovery State
-  const [videoQuery, setVideoQuery] = useState('');
-  const [isFindingVideos, setIsFindingVideos] = useState(false);
-  const [videoResults, setVideoResults] = useState<any>(null);
+  // AI Article Discovery State
+  const [articleQuery, setArticleQuery] = useState('');
+  const [isFindingArticles, setIsFindingArticles] = useState(false);
+  const [articleResults, setArticleResults] = useState<ParsedArticleResult | null>(null);
   const [loadingStage, setLoadingStage] = useState(0);
 
   const loadingStages = [
     "Establishing secure medical tunnel...",
-    "Scanning clinical YouTube archives...",
+    "Scanning trusted medical literature...",
     "Verifying source scientific accuracy...",
-    "Filtering established US medical portals...",
+    "Filtering established medical portals...",
     "Synthesizing metabolic intelligence...",
     "Finalizing educational brief..."
   ];
 
   useEffect(() => {
     let interval: number;
-    if (isFindingVideos || isSearching) {
+    if (isFindingArticles || isSearching) {
       interval = window.setInterval(() => {
         setLoadingStage((prev) => (prev + 1) % loadingStages.length);
       }, 4000);
@@ -94,7 +91,7 @@ const Education: React.FC = () => {
       setLoadingStage(0);
     }
     return () => clearInterval(interval);
-  }, [isFindingVideos, isSearching]);
+  }, [isFindingArticles, isSearching]);
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -114,23 +111,21 @@ const Education: React.FC = () => {
     }
   };
 
-  const handleFindVideos = async (e: React.FormEvent) => {
+  const handleFindArticles = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!videoQuery.trim()) return;
-    setIsFindingVideos(true);
-    setVideoResults(null);
+    if (!articleQuery.trim()) return;
+    setIsFindingArticles(true);
+    setArticleResults(null);
     try {
-      // --- START OF FIX ---
       // Fetch the raw text and then parse it
-      const rawResult = await findEducationalVideos(videoQuery);
+      const rawResult = await findEducationalArticles(articleQuery);
       const parsedData = parseAIResponse(rawResult.text);
-      setVideoResults(parsedData);
-      // --- END OF FIX ---
+      setArticleResults(parsedData);
     } catch (err) {
       console.error(err);
       // Optionally set an error state here to show in the UI
     } finally {
-      setIsFindingVideos(false);
+      setIsFindingArticles(false);
     }
   };
 
@@ -197,7 +192,7 @@ const Education: React.FC = () => {
         </div>
       </header>
 
-      {/* AI Video Discovery SECTION */}
+      {/* AI Article Discovery SECTION */}
       <section className="max-w-7xl mx-auto px-4">
         <div className="bg-slate-900 rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border border-white/10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
@@ -205,7 +200,7 @@ const Education: React.FC = () => {
           <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <div className="inline-flex items-center space-x-3 text-blue-400 font-black uppercase text-xs tracking-[0.2em]">
-                <Video className="w-5 h-5" />
+                <Globe className="w-5 h-5" />
                 <span>AI Knowledge Discovery</span>
               </div>
               <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight">
@@ -215,32 +210,32 @@ const Education: React.FC = () => {
                 Our AI scans the web in real-time for accurate educational content, prioritizing top-tier institutions like the ADA, CDC, and Mayo Clinic.
               </p>
 
-              <form onSubmit={handleFindVideos} className="relative group flex items-start">
+              <form onSubmit={handleFindArticles} className="relative group flex items-start">
                 <textarea 
-                  value={videoQuery}
+                  value={articleQuery}
                   rows={1}
-                  onChange={(e) => setVideoQuery(e.target.value)}
+                  onChange={(e) => setArticleQuery(e.target.value)}
                   onInput={(e) => {
                     const target = e.target as HTMLTextAreaElement;
                     target.style.height = 'auto';
                     target.style.height = `${target.scrollHeight}px`;
                   }}
-                  placeholder="How much walking required to avoid..."
+                  placeholder="e.g., 'impact of metformin on gut health'"
                   className="w-full pl-14 pr-32 py-5 bg-white/5 border-2 border-white/10 rounded-[2rem] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-lg text-white placeholder:text-slate-500 resize-none min-h-[64px] overflow-hidden"
                 />
-                <Youtube className="absolute left-5 top-7 text-slate-500 group-focus-within:text-red-500 transition-colors w-6 h-6" />
+                <FileText className="absolute left-5 top-7 text-slate-500 group-focus-within:text-blue-400 transition-colors w-6 h-6" />
                 <button 
-                  disabled={isFindingVideos}
+                  disabled={isFindingArticles}
                   className="absolute right-2 top-2 h-[calc(100%-1rem)] px-8 bg-blue-600 text-white rounded-[1.75rem] font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center max-h-[60px]"
                 >
-                  {isFindingVideos ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Discover'}
+                  {isFindingArticles ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Discover'}
                 </button>
               </form>
             </div>
 
             {/* --- START OF FIX: Updated Rendering Logic --- */}
             <div className="min-h-[400px]">
-              {isFindingVideos ? (
+              {isFindingArticles ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-8 p-12 bg-white/5 rounded-[3rem] border border-white/10 animate-in fade-in duration-500">
                   <div className="relative">
                     <div className="w-24 h-24 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
@@ -263,12 +258,12 @@ const Education: React.FC = () => {
                     />
                   </div>
                 </div>
-              ) : videoResults ? (
+              ) : articleResults ? (
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
                   <div className="p-6 bg-transparent">
-                     <p className="text-base font-medium text-slate-300 mb-6">"{videoResults.summary}"</p>
+                     <p className="text-base font-medium text-slate-300 mb-6">"{articleResults.summary}"</p>
                      <div className="space-y-3">
-                        {videoResults.sources.map((source, idx) => (
+                        {articleResults.sources.map((source, idx) => (
                             <a
                               key={idx}
                               href={source.uri}
@@ -279,11 +274,11 @@ const Education: React.FC = () => {
                               <div className="flex-grow pr-4">
                                 <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{source.hostname}</h4>
                                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                                  {source.isYoutube ? 'Watch on YouTube' : 'Read Full Article'}
+                                  Read Full Article
                                 </p>
                               </div>
-                              <div className={`shrink-0 p-3 rounded-xl group-hover:scale-110 transition-transform shadow-lg ${source.isYoutube ? 'bg-red-600 shadow-red-500/20' : 'bg-blue-600 shadow-blue-500/20'}`}>
-                                {source.isYoutube ? <Play className="w-5 h-5 text-white fill-white" /> : <FileText className="w-5 h-5 text-white" />}
+                              <div className={`shrink-0 p-3 rounded-xl group-hover:scale-110 transition-transform shadow-lg bg-blue-600 shadow-blue-500/20`}>
+                                <FileText className="w-5 h-5 text-white" />
                               </div>
                             </a>
                         ))}
@@ -292,7 +287,7 @@ const Education: React.FC = () => {
                 </div>
               ) : (
 
-              !isFindingVideos && !videoResults && (
+              !isFindingArticles && !articleResults && (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30 border-2 border-dashed border-white/10 rounded-[3rem] p-12">
                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
                       <Microscope className="w-10 h-10" />

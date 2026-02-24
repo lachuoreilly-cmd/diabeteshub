@@ -48,15 +48,22 @@ export async function generateExerciseIllustration(exerciseName: string): Promis
 }
 
 /**
- * Find educational videos about a health topic using Google Search grounding.
+ * Find educational articles about a health topic using Google Search grounding.
  */
-export async function findEducationalVideos(topic: string) {
+export async function findEducationalArticles(topic: string) {
   const ai = await getAI();
+    // Sanitize topic to prevent prompt injection and irrelevant queries
+    const sanitizedTopic = topic.trim().replace(/[^\w\s]/gi, '');
+    if (!sanitizedTopic) {
+        throw new Error("Invalid topic provided.");
+    }
+
   const prompt = `
-    Summarize current medical consensus and find high-quality, RECENT educational VIDEOS on YouTube about: \"${topic}\".
-    Focus grounding EXCLUSIVELY on youtube.com and established medical portals.
-    Return only videos published in the last 2 years.
-    Keep the summary concise.
+    Summarize current medical consensus and find high-quality, RECENT educational ARTICLES about: \"${sanitizedTopic}\".
+    Focus grounding EXCLUSIVELY on established medical portals and research institutions (e.g., Mayo Clinic, CDC, NIH, JAMA, The Lancet, WebMD, Healthline).
+    EXCLUDE video platforms like YouTube and Vimeo.
+    Return only articles published in the last 3 years.
+    Provide a concise, easy-to-understand summary.
   `;
 
   const response = await ai.models.generateContent({

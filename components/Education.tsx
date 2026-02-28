@@ -10,8 +10,6 @@ import {
 } from 'lucide-react';
 import { getFoodGIInfo, findEducationalArticles } from '../services/geminiService';
 
-// --- START OF FIX ---
-
 // Interface for the final, parsed data structure for rendering
 interface ParsedSource {
     hostname: string;
@@ -21,44 +19,6 @@ interface ParsedArticleResult {
     summary: string;
     sources: ParsedSource[];
 }
-
-/**
- * Parses the raw text response from the AI into a structured object.
- * @param text The raw string response from the geminiService.
- * @returns A ParsedArticleResult object or null if parsing fails.
- */
-const parseAIResponse = (text: string): ParsedArticleResult | null => {
-    if (!text || typeof text !== 'string') {
-        return null;
-    }
-
-    // Split the text to find all links, which are formatted as markdown links.
-    const linkRegex = /\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
-    const sources: ParsedSource[] = [];
-    let match;
-
-    while ((match = linkRegex.exec(text)) !== null) {
-        try {
-            const uri = match[1];
-            const hostname = new URL(uri).hostname.replace(/^www\./, '');
-            sources.push({ hostname, uri });
-        } catch (e) {
-            console.error('Invalid URL found in AI response:', match[1]);
-        }
-    }
-
-    // Assume the text before the first "###" or the first link is the summary.
-    const summaryEndIndex = text.search(/(###|\[.*?\]\()/);
-    const summary = summaryEndIndex !== -1 ? text.substring(0, summaryEndIndex).trim() : text.trim();
-
-    // Clean up asterisks and extra whitespace from the summary.
-    const cleanedSummary = summary.replace(/\*\*/g, '').replace(/\s+/g, ' ');
-
-    return { summary: cleanedSummary, sources };
-};
-// --- END OF FIX ---
-
-
 
 const Education: React.FC = () => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -117,13 +77,10 @@ const Education: React.FC = () => {
     setIsFindingArticles(true);
     setArticleResults(null);
     try {
-      // Fetch the raw text and then parse it
-      const rawResult = await findEducationalArticles(articleQuery);
-      const parsedData = parseAIResponse(rawResult.text);
-      setArticleResults(parsedData);
+      const result = await findEducationalArticles(articleQuery);
+      setArticleResults(result);
     } catch (err) {
       console.error(err);
-      // Optionally set an error state here to show in the UI
     } finally {
       setIsFindingArticles(false);
     }
@@ -173,28 +130,29 @@ const Education: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white space-y-20 pb-32 animate-in fade-in duration-700">
-      {/* Academy Hero */}
-      <header className="relative pt-24 pb-20 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+    <div className="min-h-screen bg-white space-y-12 pb-32 animate-in fade-in duration-700">
+
+      {/* Academy Hero - More Compact */}
+      <header className="relative pt-8 pb-8 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
         <div className="absolute top-0 right-0 w-1/2 h-full bg-white/10 blur-[120px] rounded-full translate-x-1/2"></div>
         <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
-          <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full mb-8">
+          <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full mb-6">
             <Sparkles className="w-4 h-4 text-blue-300" />
-            <span className="text-xs font-black uppercase tracking-widest text-blue-100">Educational Academy</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-100">Educational Academy</span>
           </div>
-          <h1 className="text-6xl lg:text-7xl font-black tracking-tighter leading-[0.9] mb-8">
+          <h1 className="text-5xl lg:text-6xl font-black tracking-tighter leading-[0.9] mb-4">
             Knowledge is <br />
             <span className="text-blue-200">Your Primary Defense.</span>
           </h1>
-          <p className="text-xl text-blue-50 font-medium leading-relaxed mb-10 max-w-2xl mx-auto">
-            Unlock the science of your metabolism with our evidence-based clinical discovery tools and metabolic food explorer.
+          <p className="text-lg text-blue-50 font-medium leading-relaxed mb-4 max-w-2xl mx-auto">
+            Unlock the science of your metabolism with our evidence-based clinical discovery tools.
           </p>
         </div>
       </header>
 
       {/* AI Article Discovery SECTION */}
-      <section className="max-w-7xl mx-auto px-4">
-        <div className="bg-slate-900 rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border border-white/10">
+      <section className="max-w-7xl mx-auto px-4 -mt-24">
+        <div className="bg-slate-900 rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border-4 border-white">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
 
           <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
@@ -207,7 +165,7 @@ const Education: React.FC = () => {
                 Discover Specialized <br />Clinical Insights.
               </h2>
               <p className="text-lg text-slate-400 font-medium leading-relaxed">
-                Our AI scans the web in real-time for accurate educational content, prioritizing top-tier institutions like the ADA, CDC, and Mayo Clinic.
+                Our AI scans the web for accurate educational content from top-tier institutions like the ADA, CDC, and Mayo Clinic.
               </p>
 
               <form onSubmit={handleFindArticles} className="relative group flex items-start">
@@ -220,8 +178,8 @@ const Education: React.FC = () => {
                     target.style.height = 'auto';
                     target.style.height = `${target.scrollHeight}px`;
                   }}
-                  placeholder="e.g., 'impact of metformin on gut health'"
-                  className="w-full pl-14 pr-32 py-5 bg-white/5 border-2 border-white/10 rounded-[2rem] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-lg text-white placeholder:text-slate-500 resize-none min-h-[64px] overflow-hidden"
+                  placeholder="'impact of metformin on gut health'"
+                  className="w-full pl-14 pr-32 py-5 bg-white/5 border-2 border-white/10 rounded-[2rem] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-lg text-white placeholder:text-slate-500 resize-none min-h-[64px]"
                 />
                 <FileText className="absolute left-5 top-7 text-slate-500 group-focus-within:text-blue-400 transition-colors w-6 h-6" />
                 <button 
@@ -233,7 +191,6 @@ const Education: React.FC = () => {
               </form>
             </div>
 
-            {/* --- START OF FIX: Updated Rendering Logic --- */}
             <div className="min-h-[400px]">
               {isFindingArticles ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-8 p-12 bg-white/5 rounded-[3rem] border border-white/10 animate-in fade-in duration-500">
@@ -286,27 +243,21 @@ const Education: React.FC = () => {
                   </div>
                 </div>
               ) : (
-
-              !isFindingArticles && !articleResults && (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30 border-2 border-dashed border-white/10 rounded-[3rem] p-12">
                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
                       <Microscope className="w-10 h-10" />
                    </div>
                    <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Awaiting Search Command...</p>
                 </div>
-              )
-            )}
+              )}
             </div>
-            {/* --- END OF FIX --- */}
 
           </div>
         </div>
       </section>
 
-      {/* --- NO CHANGES BELOW THIS LINE --- */}
-
       {/* Metabolic Food Explorer SECTION */}
-      <section className="max-w-7xl mx-auto px-4 relative">
+      <section className="max-w-7xl mx-auto px-4 relative pt-16">
         <div className="bg-blue-50/50 rounded-[4rem] shadow-sm border border-blue-100 p-8 md:p-16 relative overflow-hidden transition-colors">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white via-transparent to-transparent pointer-events-none"></div>
 

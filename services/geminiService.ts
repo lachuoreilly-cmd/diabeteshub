@@ -59,11 +59,13 @@ export async function findEducationalArticles(topic: string) {
     }
 
   const prompt = `
-    Summarize current medical consensus and find high-quality, RECENT educational ARTICLES about: \"${sanitizedTopic}\".
-    Focus grounding EXCLUSIVELY on established medical portals and research institutions (e.g., Mayo Clinic, CDC, NIH, JAMA, The Lancet, WebMD, Healthline).
-    EXCLUDE video platforms like YouTube and Vimeo.
-    Return only articles published in the last 3 years.
-    Provide a concise, easy-to-understand summary.
+    You are a medical research assistant. Your task is to provide a concise, easy-to-understand summary about the following topic, based *only* on the provided search results.
+    Query: \"${sanitizedTopic}\"
+
+    **Instructions:**
+    1. Read the provided search results from authoritative medical domains.
+    2. Synthesize the information into a single, well-written summary paragraph.
+    3. **CRITICAL:** DO NOT include any links, URLs, or source references in your summary. Your entire response must be the summary text ONLY.
   `;
 
   const response = await ai.models.generateContent({
@@ -71,15 +73,33 @@ export async function findEducationalArticles(topic: string) {
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
-      thinkingConfig: { thinkingBudget: 0 }
     },
   });
 
-  return {
-    text: response.text,
-    sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
-  };
+  // Extract the summary directly from the AI's text response.
+  const summary = response.text;
+
+  // Extract the sources directly from the reliable grounding metadata.
+  const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  
+  const sources = groundingChunks
+    .map(chunk => chunk.web?.uri) // Get all uris from the reliable grounding source
+    .filter((uri, index, self) => uri && self.indexOf(uri) === index) // Filter out nulls and duplicates
+    .map(uri => { // Format the data for the frontend
+        let hostname = '';
+        try {
+            hostname = new URL(uri).hostname.replace(/^www\./, '');
+        } catch (e) {
+            console.error('Invalid URI from grounding chunk:', uri); // Log if a URI is malformed
+        }
+        return { uri, hostname };
+    })
+    .filter(source => source.hostname); // Ensure we only return sources that have a valid hostname
+
+  // Return the final, structured data with a reliable summary and verified sources.
+  return { summary, sources };
 }
+
 
 /**
  * Analyze an image for clinical relevance using vision capabilities.

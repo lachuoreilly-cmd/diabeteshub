@@ -23,10 +23,31 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!scrollRef.current) return;
+
+    const lastMessage = messages[messages.length - 1];
+    const lastMessageIndex = messages.length - 1;
+
+    // For user messages or when loading starts, scroll to the absolute bottom.
+    // This keeps the input in view and shows the loading indicator.
+    if (lastMessage?.role === 'user' || isLoading) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+      return;
     }
-  }, [messages, isLoading]);
+
+    // For new model messages, scroll the new message into view.
+    if (lastMessage?.role === 'model' && !isLoading) {
+        const lastMessageElement = scrollRef.current.querySelector(`#message-${lastMessageIndex}`);
+        if (lastMessageElement) {
+            // The 'block: start' option aligns the top of the element with the top of the scroll container.
+            // We add a small delay to give the browser a moment to render the potentially complex markdown content
+            // and calculate the final height of the message bubble.
+            setTimeout(() => {
+                lastMessageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100); 
+        }
+    }
+}, [messages, isLoading]);
 
   // Lightweight, safe-ish markdown -> HTML renderer to avoid adding a new dependency.
   // Covers headings (###), bold (**text**), italic (*text*), unordered lists (- or *),
@@ -147,9 +168,9 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
         </div>
 
         {/* Chat Body */}
-        <div ref={scrollRef} className="flex-grow overflow-y-auto p-6 space-y-6 bg-blue-50/10">
+        <div ref={scrollRef} className="flex-grow overflow-y-auto p-6 space-y-6 bg-blue-50/10 scroll-smooth">
           {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div id={`message-${i}`} key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`p-4 rounded-[2rem] text-sm font-medium leading-relaxed max-w-[85%] ${
                 msg.role === 'user' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-800 border border-blue-50 shadow-sm'
               }`}>

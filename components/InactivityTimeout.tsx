@@ -5,7 +5,7 @@ interface InactivityTimeoutProps {
   timeoutDuration?: number;
 }
 
-const InactivityTimeout: React.FC<InactivityTimeoutProps> = ({ onTimeout, timeoutDuration = 15 * 60 * 1000 }) => {
+const InactivityTimeout: React.FC<InactivityTimeoutProps> = ({ onTimeout, timeoutDuration = 10 * 60 * 1000 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetTimeout = () => {

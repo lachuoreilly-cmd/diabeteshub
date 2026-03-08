@@ -82,19 +82,25 @@ export async function findEducationalArticles(topic: string) {
   // Extract the sources directly from the reliable grounding metadata.
   const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
   
-  const sources = groundingChunks
-    .map(chunk => chunk.web?.uri) // Get all uris from the reliable grounding source
-    .filter((uri, index, self) => uri && self.indexOf(uri) === index) // Filter out nulls and duplicates
-    .map(uri => { // Format the data for the frontend
-        let hostname = '';
-        try {
-            hostname = new URL(uri).hostname.replace(/^www\./, '');
-        } catch (e) {
-            console.error('Invalid URI from grounding chunk:', uri); // Log if a URI is malformed
-        }
-        return { uri, hostname };
-    })
-    .filter(source => source.hostname); // Ensure we only return sources that have a valid hostname
+  const sourcesMap = new Map<string, { title: string; hostname: string }>();
+
+  for (const chunk of groundingChunks) {
+    if (chunk.web && chunk.web.uri && chunk.web.title && !sourcesMap.has(chunk.web.uri)) {
+      let hostname = '';
+      try {
+        hostname = new URL(chunk.web.uri).hostname.replace(/^www\./, '');
+      } catch (e) {
+        console.error('Invalid URI from grounding chunk:', chunk.web.uri);
+        continue; // Skip malformed URIs
+      }
+      sourcesMap.set(chunk.web.uri, { title: chunk.web.title, hostname });
+    }
+  }
+
+  const sources = Array.from(sourcesMap.entries()).map(([uri, data]) => ({
+    uri,
+    ...data,
+  }));
 
   // Return the final, structured data with a reliable summary and verified sources.
   return { summary, sources };

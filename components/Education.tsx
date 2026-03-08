@@ -14,6 +14,7 @@ import { getFoodGIInfo, findEducationalArticles } from '../services/geminiServic
 interface ParsedSource {
     hostname: string;
     uri: string;
+    title: string;
 }
 interface ParsedArticleResult {
     summary: string;
@@ -229,9 +230,9 @@ const Education: React.FC = () => {
                               className="group p-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all flex items-center justify-between"
                             >
                               <div className="flex-grow pr-4">
-                                <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{source.hostname}</h4>
+                                <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{source.title}</h4>
                                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                                  Read Full Article
+                                  {source.hostname}
                                 </p>
                               </div>
                               <div className={`shrink-0 p-3 rounded-xl group-hover:scale-110 transition-transform shadow-lg bg-blue-600 shadow-blue-500/20`}>

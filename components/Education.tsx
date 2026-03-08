@@ -155,7 +155,7 @@ const Education: React.FC = () => {
         <div className="bg-slate-900 rounded-[4rem] p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border-4 border-white">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
 
-          <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
+          <div className="relative z-10 grid gap-16 items-center">
             <div className="space-y-8">
               <div className="inline-flex items-center space-x-3 text-blue-400 font-black uppercase text-xs tracking-[0.2em]">
                 <Globe className="w-5 h-5" />
@@ -216,7 +216,7 @@ const Education: React.FC = () => {
                   </div>
                 </div>
               ) : articleResults ? (
-                <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+                <div className="space-y-6 animate-in fade-in duration-500">
                   <div className="p-6 bg-transparent">
                      <p className="text-base font-medium text-slate-300 mb-6">"{articleResults.summary}"</p>
                      <div className="space-y-3">

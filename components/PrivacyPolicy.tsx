@@ -6,20 +6,26 @@ const PrivacyPolicy: React.FC = () => {
     const sections = [
         {
             icon: <User className="w-5 h-5 text-blue-600" />,
-            title: "Information We Collect",
+            title: "What Data We Collect and Why",
             content: [
                 {
-                    subtitle: "Data You Provide Directly:",
+                    subtitle: "To Create Your Account:",
                     points: [
-                        "**Account Information:** When you sign up, we collect your first name, last name, and email address to create and manage your account.",
-                        "**Health & Profile Data:** To provide our core services, we collect health information you provide, such as vitals related to metabolic health, ethnicity, and dietary preferences.",
-                        "**Family Profiles:** If you create profiles for family members, you are certifying that you have the legal authority or explicit consent to provide their personal and health information."
+                        "**Contact Information (Email, Name):** We use this to create your secure account, allow you to log in, and send important service-related notifications. We will never send you marketing emails without your explicit consent."
                     ]
                 },
                 {
-                    subtitle: "Data from Third Parties:",
+                    subtitle: "To Power Your Health Assessment:",
                     points: [
-                        "**AI Knowledge Discovery:** When you use our AI-powered features to search for health topics, your queries are processed by Google's AI services to find and summarize relevant educational articles. We do not share your personal profile data in these queries."
+                        "**Health Indicators (e.g., age, weight, height, family history, lab results):** This data is the absolute minimum required for our AI to perform the diabetes risk assessment. It is the core input for the simulation engine.",
+                        "**Lifestyle Information (e.g., diet, exercise):** This information helps the AI generate more accurate and personalized recommendations for your action plan.",
+                        "**This sensitive health data is used *only* to generate your results and is never used for advertising, sold to third parties, or shared without your explicit consent.**"
+                    ]
+                },
+                {
+                    subtitle: "To Improve The Service for Everyone:",
+                    points: [
+                        "**Anonymized & Aggregated Data:** We may use fully anonymized data (where all personal identifiers are removed) in aggregate to conduct research and improve our AI models and services. For example, we might analyze which recommendations are most effective across thousands of anonymized users."
                     ]
                 }
             ]
@@ -39,15 +45,28 @@ const PrivacyPolicy: React.FC = () => {
         },
         {
             icon: <Share2 className="w-5 h-5 text-blue-600" />,
-            title: "How We Share and Disclose Information",
+            title: "Data Sharing and Disclosure",
             content: [
                  {
                     points: [
-                        "We do not sell, rent, or trade your personal health information.",
-                        "**Service Providers:** We partner with third-party companies to operate our application. We have verified that these partners adhere to strict data protection and privacy standards. These include:",
-                        "  - **Google Cloud Platform:** For secure database hosting (Firestore) and application infrastructure.",
-                        "  - **Google AI Platform:** To power our AI Health Coach and Knowledge Discovery features.",
-                        "**Legal Compliance:** We may disclose your information if required to do so by law or in the good faith belief that such action is necessary to comply with a legal obligation, protect and defend our rights or property, or in urgent circumstances to protect the personal safety of users or the public."
+                        "**We do not sell, rent, or trade your personal health information. Period.** Our business model is built on providing a valuable service, not on monetizing your data.",
+                        "**Service Providers:** We partner with a minimal number of trusted third-party companies to operate our application. We have verified that these partners adhere to strict data protection and privacy standards (including HIPAA compliance where applicable). These include:",
+                        "  - **Google Cloud Platform:** For secure, HIPAA-compliant database hosting (Firestore) and application infrastructure.",
+                        "  - **Google AI Platform:** To power our AI Health Coach and Knowledge Discovery features. Queries sent to this service are anonymized and do not contain personal identifiers.",
+                        "**Legal Compliance:** We may disclose your information *only if* required to do so by law or in the good faith belief that such action is necessary to comply with a legal obligation, protect and defend our rights or property, or in urgent circumstances to protect the personal safety of users or the public."
+                    ]
+                }
+            ]
+        },
+        {
+            icon: <ShieldCheck className="w-5 h-5 text-blue-600" />,
+            title: "HIPAA Compliance",
+            content: [
+                {
+                    points: [
+                        "This application is a tool for personal health education and is not a 'covered entity' under the Health Insurance Portability and Accountability Act (HIPAA).",
+                        "However, we believe in the principles of patient privacy and data security that HIPAA represents. Therefore, we voluntarily align our data security practices with HIPAA's technical and administrative safeguards to ensure your data is handled with the highest standard of care.",
+                        "Our commitment includes robust encryption, strict access controls, and secure data infrastructure, reflecting our dedication to protecting your sensitive information as if it were governed by HIPAA regulations."
                     ]
                 }
             ]

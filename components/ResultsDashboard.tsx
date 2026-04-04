@@ -103,7 +103,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
       )}
 
       <div className="flex flex-col lg:flex-row gap-8 mb-8">
-        <div className={`flex-[2] p-8 md:p-10 rounded-[3rem] border-2 ${getRiskColorClass(result.riskLevel)} relative overflow-hidden flex flex-col justify-between`}>
+        <div id="metabolic-summary" className={`flex-[2] p-8 md:p-10 rounded-[3rem] border-2 ${getRiskColorClass(result.riskLevel)} relative overflow-hidden flex flex-col justify-between`}>
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-6">
               <div>

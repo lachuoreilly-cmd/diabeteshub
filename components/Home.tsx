@@ -32,8 +32,7 @@ const Home: React.FC = () => {
             </h1>
 
             <p className="text-base text-slate-600 max-w-xl mx-auto font-medium leading-tight animate-in fade-in duration-1000 delay-300">
-              Utilizing advanced AI methods, our engine precisely <strong>calculates</strong> your metabolic baseline, 
-              <strong>simulates</strong> diverse health outcomes, and <strong>predicts</strong> your biological trajectory.
+            Our website is dedicated to educating you about your diabetes risk through a personalized assessment calculated by advanced AI models. By analyzing your key health indicators, our platform provides a confidential and credible metabolic health forecast. We translate complex data into clear, actionable insights, empowering you to understand your health trajectory and build a proactive plan for a healthier tomorrow.
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-3 pt-3 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500">

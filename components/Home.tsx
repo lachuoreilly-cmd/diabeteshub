@@ -85,19 +85,24 @@ const Home: React.FC = () => {
                 <span className="text-indigo-600 text-3xl lg:text-4xl">Education.</span>
               </h2>
               <p className="text-base text-slate-600 leading-snug font-medium">
-                Our Academy provides physician-vetted video modules to help you understand what's happening at a cellular level.
+                AI Knowledge Discovery, Instantly Analyze Any Food's GI, Physician-Vetted Q&A.
               </p>
               
               <div className="space-y-3">
                 <AcademyFeature 
-                  icon={<Play className="w-4 h-4" />} 
-                  title="Video Academy" 
-                  desc="Short, powerful visual lessons on insulin and glucose." 
+                  icon={<Sparkles className="w-4 h-4" />} 
+                  title="AI Knowledge Discovery" 
+                  desc="Unlock insights from our vast health database." 
                 />
                 <AcademyFeature 
-                  icon={<Microscope className="w-4 h-4" />} 
-                  title="Biological Simulators" 
-                  desc="Interactive guides on the insulin mechanism." 
+                  icon={<Apple className="w-4 h-4" />} 
+                  title="Instant GI Analysis" 
+                  desc="Analyze any food's Glycemic Index on the fly." 
+                />
+                 <AcademyFeature 
+                  icon={<HelpCircle className="w-4 h-4" />} 
+                  title="Physician-Vetted Q&A" 
+                  desc="Get trusted answers to your health questions." 
                 />
               </div>
 

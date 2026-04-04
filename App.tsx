@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -13,8 +14,11 @@ import LifestyleInsights from './components/LifestyleInsights';
 import AppTutorial from './components/AppTutorial';
 import BrandBanner from './components/BrandBanner';
 import InactivityTimeout from './components/InactivityTimeout';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import { db } from './services/database';
 import { User, AssessmentResult, Profile, HealthData } from './types';
+import ScrollToTop from './components/ScrollToTop';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -130,6 +134,7 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
+      <ScrollToTop />
       {user && <InactivityTimeout onTimeout={handleLogout} />}
       <div className="min-h-screen bg-white transition-colors duration-300 flex overflow-x-hidden">
         <Navbar 
@@ -153,27 +158,31 @@ const App: React.FC = () => {
               <Route path="/assess" element={<DiagnosticForm user={user} activeProfile={activeProfile} onComplete={addResultToHistory} />} />
               <Route path="/history" element={user && activeProfile ? <History user={user} activeProfile={activeProfile} onUpdate={updateActiveProfile} /> : <Navigate to="/auth" />} />
               <Route path="/auth" element={<Auth onLogin={handleLogin} />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
           
           <footer className="bg-slate-50 text-slate-500 py-16 px-4 border-t border-slate-100 mt-20">
             <div className="max-w-6xl mx-auto text-center space-y-8">
-              <div className="flex justify-center space-x-12 opacity-60">
-                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cloud Database</span>
-                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">End-to-End Encryption</span>
-                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Privacy Compliant</span>
-              </div>
-              
-              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-blue-100 rounded-full shadow-sm">
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demo Login:</span>
-                 <code className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">demo@diabetes-companion.ai</code>
-              </div>
 
-              <p className="text-sm font-bold text-slate-600"> 2026 Diabetes Companion. Your metabolic command center.</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold max-w-2xl mx-auto leading-relaxed">
-                Medical Disclaimer: This application is for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always seek clinical advice from a professional.
-              </p>
+                <div className="flex items-center justify-center space-x-6 text-sm">
+                    <a href="#/privacy-policy" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Privacy Policy</a>
+                    <span className="text-slate-300">|</span>
+                    <a href="#/terms-of-service" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Terms of Service</a>
+                </div>
+
+                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-blue-100 rounded-full shadow-sm">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demo Login:</span>
+                    <code className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">demo@diabetes-companion.ai</code>
+                </div>
+                
+                <p className="text-sm font-bold text-slate-600">&copy; 2024 Diabetes Companion. All Rights Reserved.</p>
+
+                <p className="text-xs text-slate-400 max-w-3xl mx-auto leading-relaxed">
+                    <strong className="font-black text-slate-500">Medical Disclaimer:</strong> This application is for informational and educational purposes only. It is not intended to provide medical advice or to be a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
+                </p>
             </div>
           </footer>
         </div>

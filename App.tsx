@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './components/Home';
 import DiagnosticForm from './components/DiagnosticForm';
@@ -41,8 +41,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user && window.location.hash === '#/auth') {
-      window.location.href = '#/dashboard';
+    if (user && window.location.pathname === '/auth') {
+      window.location.href = '/dashboard';
     }
   }, [user]);
 
@@ -133,7 +133,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <ScrollToTop />
       {user && <InactivityTimeout onTimeout={handleLogout} />}
       <div className="min-h-screen bg-white transition-colors duration-300 flex overflow-x-hidden">
@@ -150,12 +150,12 @@ const App: React.FC = () => {
           <main className="flex-grow pt-8 lg:pt-0">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/education" element={<Education />} />
+              <Route path="/diabetes-education" element={<Education />} />
               <Route path="/coach" element={<HealthCoach user={user} activeProfile={activeProfile} />} />
               <Route path="/dashboard" element={user && activeProfile ? <Dashboard user={user} activeProfile={activeProfile} onUpdateUser={updateUser} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
               <Route path="/action-plan" element={user && activeProfile ? <ActionPlan user={user} activeProfile={activeProfile} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
               <Route path="/insights" element={user && activeProfile ? <LifestyleInsights activeProfile={activeProfile} /> : <Navigate to="/auth" />} />
-              <Route path="/assess" element={<DiagnosticForm user={user} activeProfile={activeProfile} onComplete={addResultToHistory} />} />
+              <Route path="/diabetes-risk-assessment" element={<DiagnosticForm user={user} activeProfile={activeProfile} onComplete={addResultToHistory} />} />
               <Route path="/history" element={user && activeProfile ? <History user={user} activeProfile={activeProfile} onUpdate={updateActiveProfile} /> : <Navigate to="/auth" />} />
               <Route path="/auth" element={<Auth onLogin={handleLogin} />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -168,9 +168,9 @@ const App: React.FC = () => {
             <div className="max-w-6xl mx-auto text-center space-y-8">
 
                 <div className="flex items-center justify-center space-x-6 text-sm">
-                    <a href="#/privacy-policy" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Privacy Policy</a>
+                    <a href="/privacy-policy" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Privacy Policy</a>
                     <span className="text-slate-300">|</span>
-                    <a href="#/terms-of-service" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Terms of Service</a>
+                    <a href="/terms-of-service" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Terms of Service</a>
                 </div>
 
                 <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-blue-100 rounded-full shadow-sm">
@@ -187,7 +187,7 @@ const App: React.FC = () => {
           </footer>
         </div>
       </div>
-    </HashRouter>
+    </BrowserRouter>
   );
 };
 

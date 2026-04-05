@@ -21,9 +21,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
 
   const navLinks = [
     { path: '/', label: 'Home', icon: Home },
-    { path: '/education', label: 'Academy', icon: BookOpen },
+    { path: '/diabetes-education', label: 'Academy', icon: BookOpen },
     { path: '/coach', label: 'AI Coach', icon: Bot },
-    { path: '/assess', label: 'Assessment', icon: Activity },
+    { path: '/diabetes-risk-assessment', label: 'Assessment', icon: Activity },
   ];
 
   if (user) {

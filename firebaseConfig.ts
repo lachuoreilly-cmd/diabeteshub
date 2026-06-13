@@ -1,26 +1,32 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
-
-export const firebaseConfig = {
-    apiKey: import.meta.env.VITE_API_KEY,
-    authDomain: import.meta.env.VITE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_APP_ID,
-    siteKey: import.meta.env.VITE_SITE_KEY
-};
+import { initializeFirestore, doc, getDocFromServer } from "firebase/firestore";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import firebaseConfig from './firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 
-const appCheck = initializeAppCheck(app, {
-  provider: new ReCaptchaV3Provider(firebaseConfig.siteKey),
-  isTokenAutoRefreshEnabled: true
-});
+let analytics;
+if (typeof window !== 'undefined') {
+  try {
+    analytics = getAnalytics(app);
+  } catch (e) {
+    console.warn("Firebase Analytics could not be initialized.", e);
+  }
+}
 
-const analytics = getAnalytics(app);
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
+  experimentalForceLongPolling: true
+}, firebaseConfig.firestoreDatabaseId);
+
 export const auth = getAuth(app);
+
+// Force persistence to be explicit for iframe environments
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch(err => {
+    console.warn("Failed to set auth persistence:", err);
+  });
+}
+
+export { analytics };

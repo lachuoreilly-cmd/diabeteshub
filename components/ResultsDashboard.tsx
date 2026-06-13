@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AssessmentResult, DiabetesStatus, RiskLevel } from '../types';
 import { ShieldAlert, CheckCircle, Flame, Apple, Dumbbell, RefreshCcw, Info, Activity, ClipboardList, Edit3, Printer, Save, UserPlus, Lock, Gift, Sparkles, Map, Thermometer, ArrowRight, Gauge } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 
 interface ResultsDashboardProps {
   result: AssessmentResult;
@@ -207,8 +208,8 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
               <div className="p-3 bg-green-50 rounded-2xl"><Apple className="w-6 h-6 text-green-600" /></div>
               <h3 className="text-2xl font-black text-slate-900 tracking-tight">Personalized Diet Synthesis</h3>
             </div>
-            <div className="prose prose-slate max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap text-base">
-              {result.actionPlan.dietPlan}
+            <div className="prose prose-slate max-w-none text-slate-600 font-medium leading-relaxed prose-headings:text-slate-900 prose-strong:text-slate-900 prose-p:mb-4">
+              <ReactMarkdown>{result.actionPlan.dietPlan}</ReactMarkdown>
             </div>
           </div>
           <div className="bg-white p-8 md:p-10 rounded-[3rem] border border-blue-50 shadow-sm relative overflow-hidden">
@@ -217,8 +218,8 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
               <div className="p-3 bg-blue-50 rounded-2xl"><Dumbbell className="w-6 h-6 text-blue-600" /></div>
               <h3 className="text-2xl font-black text-slate-900 tracking-tight">Exercise Simulation Output</h3>
             </div>
-            <div className="prose prose-slate max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap text-base">
-              {result.actionPlan.exercisePlan}
+            <div className="prose prose-slate max-w-none text-slate-600 font-medium leading-relaxed prose-headings:text-slate-900 prose-strong:text-slate-900 prose-p:mb-4">
+              <ReactMarkdown>{result.actionPlan.exercisePlan}</ReactMarkdown>
             </div>
           </div>
         </div>

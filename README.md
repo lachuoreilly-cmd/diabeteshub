@@ -8,7 +8,11 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1aGi35dU_zWMh4qr4N8-BV_ECsb-wgVUX
 
-## Run Locally
+## Firebase Configuration
+
+This app uses an automatically provisioned Firebase project for authentication and database storage.
+
+Configuration is managed via `firebase-applet-config.json`, which is bootstrapped by AI Studio. Firestore Security Rules are managed in `firestore.rules`.
 
 **Prerequisites:**  Node.js
 

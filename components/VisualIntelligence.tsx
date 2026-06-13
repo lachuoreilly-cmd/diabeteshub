@@ -7,7 +7,8 @@ import {
   Layout, Type, CheckCircle2, ChevronRight,
   RefreshCw, Scan, Beaker, Wand2
 } from 'lucide-react';
-import { analyzeImage, generateExerciseIllustration, generateExerciseVideo } from '../services/geminiService';
+import { analyzeImage, generateHealthImage, generateExerciseVideo } from '../services/geminiService';
+import ReactMarkdown from 'react-markdown';
 
 const VisualIntelligence: React.FC = () => {
   const [activeTool, setActiveTool] = useState<'vision' | 'studio' | 'motion'>('vision');
@@ -75,7 +76,7 @@ const VisualIntelligence: React.FC = () => {
     
     setLoading(true);
     try {
-      const img = await generateExerciseIllustration(genPrompt, imageSize);
+      const img = await generateHealthImage(genPrompt, imageSize);
       setResult(img);
     } catch (e: any) {
       console.error(e);
@@ -288,8 +289,8 @@ const VisualIntelligence: React.FC = () => {
                       <p className="text-xs text-blue-600 font-bold">Multi-modal AI Analysis</p>
                     </div>
                   </div>
-                  <div className="prose prose-slate max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">
-                    {result}
+                  <div className="prose prose-slate max-w-none text-slate-600 font-medium leading-relaxed prose-headings:text-slate-900 prose-strong:text-slate-900 prose-p:mb-4">
+                    <ReactMarkdown>{result || ""}</ReactMarkdown>
                   </div>
                 </div>
               )}
@@ -329,7 +330,7 @@ const FileDrop = ({ onFile, preview }: { onFile: (e: any) => void, preview: stri
       ) : (
         <>
           <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
-            <Camera className="w-8 h-8 text-blue-600" />
+            <Upload className="w-8 h-8 text-blue-600" />
           </div>
           <p className="text-sm font-black text-slate-900">Capture or Upload</p>
           <p className="text-xs text-slate-400 font-medium mt-1">PNG, JPG up to 10MB</p>

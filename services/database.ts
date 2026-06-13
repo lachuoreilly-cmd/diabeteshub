@@ -1,13 +1,55 @@
 
-import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseAuthUser } from "firebase/auth";
-import { firebaseConfig } from "../firebaseConfig";
+import { db as firestore, auth } from "../firebaseConfig";
 import { User, Profile, DiabetesStatus, RiskLevel, Medication } from '../types';
 
-const app = initializeApp(firebaseConfig);
-const firestore = getFirestore(app);
-const auth = getAuth(app);
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 class DatabaseService {
   private usersCollection = collection(firestore, 'users');
@@ -68,7 +110,14 @@ class DatabaseService {
 
   public async seed() {
     try {
-        const q = await getDoc(doc(this.usersCollection, 'demo-user'));
+        const docRef = doc(this.usersCollection, 'demo-user');
+        let q;
+        try {
+          q = await getDoc(docRef);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, 'users/demo-user');
+          return;
+        }
 
         if (!q.exists()) {
             const demoUser: User = {
@@ -78,7 +127,11 @@ class DatabaseService {
                 profiles: [this.createProfile('Demo User', true)],
                 activeProfileId: 'default'
             };
-            await setDoc(doc(this.usersCollection, 'demo-user'), demoUser);
+            try {
+              await setDoc(docRef, demoUser);
+            } catch (error) {
+              handleFirestoreError(error, OperationType.WRITE, 'users/demo-user');
+            }
         }
     } catch (error) {
         console.error("Error seeding database:", error);
@@ -103,9 +156,12 @@ class DatabaseService {
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         throw new Error('An account with this email address already exists.');
+      } else if (error.code === 'permission-denied') {
+        handleFirestoreError(error, OperationType.WRITE, `users/${auth.currentUser?.uid}`);
       } else {
         throw new Error('An unexpected error occurred while creating your account. Please try again later.');
       }
+      return {} as User; // Should not reach here
     }
   }
 
@@ -114,16 +170,34 @@ class DatabaseService {
     const firebaseUser = userCredential.user;
 
     if (email.toLowerCase() === 'demo@diabetes-companion.ai') {
-      let userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
+      const docRef = doc(this.usersCollection, 'demo-user');
+      let userDoc;
+      try {
+        userDoc = await getDoc(docRef);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, 'users/demo-user');
+        throw error;
+      }
       if (!userDoc.exists()) {
         await this.seed();
-        userDoc = await getDoc(doc(this.usersCollection, 'demo-user'));
+        try {
+          userDoc = await getDoc(docRef);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, 'users/demo-user');
+          throw error;
+        }
       }
       return userDoc.data() as User;
     }
 
     const userDocRef = doc(this.usersCollection, firebaseUser.uid);
-    let userDoc = await getDoc(userDocRef);
+    let userDoc;
+    try {
+      userDoc = await getDoc(userDocRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+      throw error;
+    }
 
     if (!userDoc.exists()) {
       const namePrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User';
@@ -137,7 +211,11 @@ class DatabaseService {
         activeProfileId: 'default'
       };
 
-      await setDoc(userDocRef, newUser);
+      try {
+        await setDoc(userDocRef, newUser);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${firebaseUser.uid}`);
+      }
       return newUser;
     }
 
@@ -146,7 +224,11 @@ class DatabaseService {
         const name = userData.name || (userData.email ? userData.email.split('@')[0] : 'User');
         userData.profiles = [this.createProfile(name, false)];
         userData.activeProfileId = 'default';
-        await setDoc(userDocRef, userData, { merge: true });
+        try {
+          await setDoc(userDocRef, userData, { merge: true });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, `users/${firebaseUser.uid}`);
+        }
     }
 
     return userData;
@@ -154,29 +236,101 @@ class DatabaseService {
 
   public getCurrentUser(): Promise<User | null> {
     return new Promise((resolve) => {
-      onAuthStateChanged(auth, async (firebaseUser: FirebaseAuthUser | null) => {
+      // Extended timeout for slow network environments (15s instead of 10s Firestore default)
+      const timeoutId = setTimeout(() => {
+        console.warn("Session check timed out. Checking local auth state...");
+        const firebaseUser = auth.currentUser;
         if (firebaseUser) {
+          const name = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "User";
+          resolve({
+            id: firebaseUser.uid,
+            name: name,
+            email: firebaseUser.email || "",
+            profiles: [this.createProfile(name, false)],
+            activeProfileId: 'default'
+          });
+        } else {
+          resolve(null);
+        }
+      }, 15000);
+
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseAuthUser | null) => {
+        if (!firebaseUser) {
+          clearTimeout(timeoutId);
+          unsubscribe();
+          resolve(null);
+          return;
+        }
+
+        try {
           const userDocRef = firebaseUser.email === 'demo@diabetes-companion.ai' 
-            ? doc(this.usersCollection, 'demo-user') 
-            : doc(this.usersCollection, firebaseUser.uid);
+            ? doc(firestore, 'users', 'demo-user') 
+            : doc(firestore, 'users', firebaseUser.uid);
           
-          const userDoc = await getDoc(userDocRef);
+          let userDoc;
+          try {
+            userDoc = await getDoc(userDocRef);
+            clearTimeout(timeoutId);
+          } catch (error: any) {
+            clearTimeout(timeoutId);
+            const errorMessage = error.message || "";
+            // If network failure or offline, return a valid offline-mode profile so the app boots
+            if (errorMessage.includes('offline') || error.code === 'unavailable' || error.code === 'auth/network-request-failed') {
+              console.warn("Firestore/Auth restricted or offline during fetch. Returning initialized offline profile.");
+              const name = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "User";
+              resolve({
+                id: firebaseUser.uid,
+                name: name,
+                email: firebaseUser.email || "",
+                profiles: [this.createProfile(name, false)],
+                activeProfileId: 'default'
+              });
+              unsubscribe();
+              return;
+            }
+            handleFirestoreError(error, OperationType.GET, firebaseUser.email === 'demo@diabetes-companion.ai' ? 'users/demo-user' : `users/${firebaseUser.uid}`);
+            resolve(null);
+            unsubscribe();
+            return;
+          }
           
-          if (userDoc.exists()) {
+          if (userDoc && userDoc.exists()) {
             let userData = userDoc.data() as User;
             if (!userData.profiles || userData.profiles.length === 0 || !userData.activeProfileId) {
               const name = userData.name || (userData.email ? userData.email.split('@')[0] : 'User');
               userData.profiles = [this.createProfile(name, false)];
               userData.activeProfileId = 'default';
-              await setDoc(userDocRef, userData, { merge: true });
+              try {
+                await setDoc(userDocRef, userData, { merge: true });
+              } catch (error) {
+                console.warn("Failed to update profile structure (offline?), continuing with memory state");
+              }
             }
             resolve(userData);
+          } else if (firebaseUser.email === 'demo@diabetes-companion.ai') {
+            await this.seed();
+            const redoc = await getDoc(userDocRef);
+            resolve(redoc.exists() ? redoc.data() as User : null);
           } else {
-            resolve(null);
+            const name = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "User";
+            resolve({
+              id: firebaseUser.uid,
+              name: name,
+              email: firebaseUser.email || "",
+              profiles: [this.createProfile(name, false)],
+              activeProfileId: 'default'
+            });
           }
-        } else {
+        } catch (error) {
+          clearTimeout(timeoutId);
+          console.error("Auth state processing failed:", error);
           resolve(null);
         }
+        unsubscribe();
+      }, (err) => {
+        clearTimeout(timeoutId);
+        console.error("onAuthStateChanged error:", err);
+        resolve(null);
       });
     });
   }
@@ -187,15 +341,29 @@ class DatabaseService {
 
   public async updateUser(user: User): Promise<User> {
     if (user.id) {
-      await setDoc(doc(this.usersCollection, user.id), { ...user }, { merge: true });
+      try {
+        await setDoc(doc(this.usersCollection, user.id), { ...user }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.id}`);
+      }
     }
     return user;
+  }
+
+  public async exportData(): Promise<string> {
+    const user = await this.getCurrentUser();
+    if (!user) throw new Error("User not authenticated");
+    return JSON.stringify(user, null, 2);
   }
 
   public async clearAllData() {
     const currentUser = await this.getCurrentUser();
     if(currentUser && currentUser.id) {
-      await deleteDoc(doc(this.usersCollection, currentUser.id));
+      try {
+        await deleteDoc(doc(this.usersCollection, currentUser.id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `users/${currentUser.id}`);
+      }
     }
     await signOut(auth);
     window.location.href = '#/';

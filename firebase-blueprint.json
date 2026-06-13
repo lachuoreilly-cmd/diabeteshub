@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Main user document containing profile and settings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "activeProfileId": { "type": "string" },
+        "profiles": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Profile" }
+        }
+      },
+      "required": ["id", "email", "name", "profiles", "activeProfileId"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "Individual health profile (Self or Family member).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "relationship": { "type": "string" },
+        "ethnicity": { "type": "string" },
+        "dietPreference": { "type": "string" },
+        "history": { "type": "array", "items": { "type": "object" } },
+        "glucoseLogs": { "type": "array", "items": { "type": "object" } },
+        "mealLogs": { "type": "array", "items": { "type": "object" } },
+        "exerciseLogs": { "type": "array", "items": { "type": "object" } },
+        "myExercisePlans": { "type": "array", "items": { "type": "object" } },
+        "exerciseSessions": { "type": "array", "items": { "type": "object" } },
+        "savedRecipes": { "type": "array", "items": { "type": "object" } },
+        "hba1cHistory": { "type": "array", "items": { "type": "object" } },
+        "currentMedications": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["id", "name", "relationship"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user data and health profiles."
+    }
+  }
+}

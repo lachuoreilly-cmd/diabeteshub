@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './components/Home';
 import DiagnosticForm from './components/DiagnosticForm';
@@ -20,31 +20,74 @@ import { db } from './services/database';
 import { User, AssessmentResult, Profile, HealthData } from './types';
 import ScrollToTop from './components/ScrollToTop';
 
+const ProtectedRoute: React.FC<{ children: React.ReactNode, user: User | null, loading: boolean }> = ({ children, user, loading }) => {
+  if (loading) return null; // Let the main loading screen handle it
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+  const [isOnline, setIsOnline] = useState(true);
   const [guestResult, setGuestResult] = useState<{ result: AssessmentResult, data: HealthData } | null>(null);
 
   useEffect(() => {
-    const initSession = async () => {
-      const activeUser = await db.getCurrentUser();
-      if (activeUser) {
-        setUser(activeUser);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
       }
-      setLoading(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        const activeUser = await db.getCurrentUser();
+        if (activeUser) {
+          const lastActivity = localStorage.getItem('lastActivity');
+          const fifteenMinutes = 15 * 60 * 1000;
+          
+          if (lastActivity && (Date.now() - parseInt(lastActivity)) > fifteenMinutes) {
+            console.log("Session expired due to inactivity");
+            await handleLogout();
+          } else {
+            setUser(activeUser);
+            // Refresh last activity on successful session init
+            localStorage.setItem('lastActivity', Date.now().toString());
+          }
+        }
+      } catch (error) {
+        console.error("Session initialization failed:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     initSession();
   }, []);
 
   useEffect(() => {
     if (user && window.location.pathname === '/auth') {
-      window.location.href = '/dashboard';
+      navigate('/dashboard');
     }
-  }, [user]);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (darkMode) {
@@ -59,6 +102,7 @@ const App: React.FC = () => {
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
   const handleLogin = async (userData: User) => {
+    localStorage.setItem('lastActivity', Date.now().toString());
     if (guestResult) {
         await addResultToHistory(guestResult.result, guestResult.data, userData);
         const updatedUser = await db.getCurrentUser();
@@ -72,8 +116,16 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem('lastActivity');
+    try {
+      sessionStorage.removeItem('health_coach_messages');
+      localStorage.removeItem('health_coach_messages');
+    } catch (e) {
+      console.error(e);
+    }
     await db.logout();
     setUser(null);
+    navigate('/auth');
   };
 
   const updateUser = async (update: Partial<User>) => {
@@ -133,7 +185,12 @@ const App: React.FC = () => {
   );
 
   return (
-    <BrowserRouter>
+    <>
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-white text-[10px] font-black uppercase tracking-[0.2em] py-2 text-center shadow-lg animate-in slide-in-from-top duration-500">
+          Network Disconnected — Platform operating in legacy offline mode
+        </div>
+      )}
       <ScrollToTop />
       {user && <InactivityTimeout onTimeout={handleLogout} />}
       <div className="min-h-screen bg-white transition-colors duration-300 flex overflow-x-hidden">
@@ -147,16 +204,16 @@ const App: React.FC = () => {
           <AppTutorial />
           <BrandBanner />
 
-          <main className="flex-grow pt-8 lg:pt-0">
+          <main className="flex-grow pt-2 lg:pt-0">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/diabetes-education" element={<Education />} />
               <Route path="/coach" element={<HealthCoach user={user} activeProfile={activeProfile} />} />
-              <Route path="/dashboard" element={user && activeProfile ? <Dashboard user={user} activeProfile={activeProfile} onUpdateUser={updateUser} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
-              <Route path="/action-plan" element={user && activeProfile ? <ActionPlan user={user} activeProfile={activeProfile} onUpdateProfile={updateActiveProfile} /> : <Navigate to="/auth" />} />
-              <Route path="/insights" element={user && activeProfile ? <LifestyleInsights activeProfile={activeProfile} /> : <Navigate to="/auth" />} />
+              <Route path="/dashboard" element={<ProtectedRoute user={user} loading={loading}>{activeProfile && <Dashboard user={user} activeProfile={activeProfile} onUpdateUser={updateUser} onUpdateProfile={updateActiveProfile} />}</ProtectedRoute>} />
+              <Route path="/action-plan" element={<ProtectedRoute user={user} loading={loading}>{activeProfile && <ActionPlan user={user} activeProfile={activeProfile} onUpdateProfile={updateActiveProfile} />}</ProtectedRoute>} />
+              <Route path="/insights" element={<ProtectedRoute user={user} loading={loading}>{activeProfile && <LifestyleInsights activeProfile={activeProfile} />}</ProtectedRoute>} />
               <Route path="/diabetes-risk-assessment" element={<DiagnosticForm user={user} activeProfile={activeProfile} onComplete={addResultToHistory} />} />
-              <Route path="/history" element={user && activeProfile ? <History user={user} activeProfile={activeProfile} onUpdate={updateActiveProfile} /> : <Navigate to="/auth" />} />
+              <Route path="/history" element={<ProtectedRoute user={user} loading={loading}>{activeProfile && <History user={user} activeProfile={activeProfile} onUpdate={updateActiveProfile} />}</ProtectedRoute>} />
               <Route path="/auth" element={<Auth onLogin={handleLogin} />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
@@ -187,7 +244,7 @@ const App: React.FC = () => {
           </footer>
         </div>
       </div>
-    </BrowserRouter>
+    </>
   );
 };
 

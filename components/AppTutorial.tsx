@@ -43,7 +43,7 @@ const AppTutorial: React.FC = () => {
     {
       title: "Risk Assessment",
       description: "The core of our platform. Enter your biometrics and lifestyle data here to generate a comprehensive risk simulation.",
-      route: "/assess",
+      route: "/diabetes-risk-assessment",
       icon: <Activity className="w-8 h-8 text-blue-600" />
     },
     {

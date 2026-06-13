@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, Activity, Zap, ShieldCheck, HeartPulse, Apple, Dumbbell, 
   Droplets, HelpCircle, ChevronDown, ChevronUp, Info, Microscope, 
@@ -8,7 +8,10 @@ import {
   Search, ExternalLink, Loader2, Scale, Youtube, Video, Copy, Maximize2,
   AlertTriangle, FileText, Globe
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { getFoodGIInfo, findEducationalArticles } from '../services/geminiService';
+
+import ReactMarkdown from 'react-markdown';
 
 // Interface for the final, parsed data structure for rendering
 interface ParsedSource {
@@ -32,6 +35,21 @@ const Education: React.FC = () => {
   const [isFindingArticles, setIsFindingArticles] = useState(false);
   const [articleResults, setArticleResults] = useState<ParsedArticleResult | null>(null);
   const [loadingStage, setLoadingStage] = useState(0);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
+
+  const widgetRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (widgetRef.current) {
+        widgetRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        widgetRef.current.focus({ preventScroll: true });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const COOLDOWN_MS = 5000; // 5 second cooldown per search
 
   const loadingStages = [
     "Establishing secure medical tunnel...",
@@ -60,13 +78,27 @@ const Education: React.FC = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim() || isSearching) return;
+    
+    const now = Date.now();
+    if (now - lastRequestTime < COOLDOWN_MS) {
+      alert("Please wait a few seconds between metabolic queries.");
+      return;
+    }
+    setLastRequestTime(now);
+
     setIsSearching(true);
     try {
       const result = await getFoodGIInfo(searchQuery);
       setSearchResult(result);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const errorMessage = err?.message || "";
+      if (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("spending cap")) {
+        alert("API Quota exceeded. Please check your billing settings in AI Studio.");
+      } else {
+        alert("Discovery failed: " + (errorMessage || "Unknown error"));
+      }
     } finally {
       setIsSearching(false);
     }
@@ -74,14 +106,28 @@ const Education: React.FC = () => {
 
   const handleFindArticles = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!articleQuery.trim()) return;
+    if (!articleQuery.trim() || isFindingArticles) return;
+    
+    const now = Date.now();
+    if (now - lastRequestTime < COOLDOWN_MS) {
+      alert("Please wait a few seconds between clinical searches.");
+      return;
+    }
+    setLastRequestTime(now);
+
     setIsFindingArticles(true);
     setArticleResults(null);
     try {
       const result = await findEducationalArticles(articleQuery);
       setArticleResults(result);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const errorMessage = err?.message || "";
+      if (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("spending cap")) {
+        alert("API Quota exceeded. Please check your billing settings in AI Studio.");
+      } else {
+        alert("Knowledge discovery failed: " + (errorMessage || "Unknown error"));
+      }
     } finally {
       setIsFindingArticles(false);
     }
@@ -154,7 +200,7 @@ const Education: React.FC = () => {
       </div>
 
       {/* AI Article Discovery SECTION */}
-      <section className="max-w-7xl mx-auto px-4 -mt-16 md:-mt-24 relative z-20 w-full max-w-[100vw]">
+      <section ref={widgetRef} tabIndex={-1} className="scroll-mt-24 sm:scroll-mt-28 outline-none max-w-7xl mx-auto px-4 -mt-16 md:-mt-24 relative z-20 w-full max-w-[100vw]">
         <div className="bg-slate-900 rounded-[2rem] md:rounded-[4rem] p-6 sm:p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border-2 md:border-4 border-white w-full">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
 
@@ -222,10 +268,12 @@ const Education: React.FC = () => {
                   </div>
                 </div>
               ) : articleResults ? (
-                <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500 text-left w-full">
+                <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500 text-left w-full">
                   <div className="bg-transparent min-w-0 w-full text-left">
-                     <p className="text-sm sm:text-base font-medium text-slate-300 mb-6 break-words leading-relaxed pt-2">"{articleResults.summary}"</p>
-                     <div className="space-y-3 min-w-0 w-full">
+                     <div className="prose prose-invert prose-slate max-w-none mb-10 prose-headings:mb-4 prose-p:mb-5 prose-li:mb-2 prose-strong:text-white">
+                       <ReactMarkdown>{articleResults.summary}</ReactMarkdown>
+                     </div>
+                     <div className="space-y-3 min-w-0 w-full pt-4 border-t border-white/10">
                         {articleResults.sources.map((source, idx) => (
                             <a
                               key={idx}
@@ -361,8 +409,10 @@ const Education: React.FC = () => {
 
                     <div className="space-y-4">
                       <div className="flex items-start space-x-3">
-                        <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                        <p className="text-sm text-slate-600 leading-relaxed font-medium">{searchResult.data.reasoning}</p>
+                        <Info className="w-5 h-5 text-blue-500 shrink-0 mt-1" />
+                        <div className="prose prose-slate max-w-none text-sm leading-relaxed prose-headings:text-slate-900 prose-headings:mt-4 prose-headings:mb-2 prose-p:mb-3">
+                          <ReactMarkdown>{searchResult.data.reasoning}</ReactMarkdown>
+                        </div>
                       </div>
                       <div className="p-5 bg-blue-50 border border-blue-100 rounded-2xl">
                         <div className="flex items-center space-x-2 text-blue-600 mb-1">
@@ -449,10 +499,10 @@ const Education: React.FC = () => {
                Run a personal health simulation now to see how your habits impact your metabolic future.
              </p>
              <div className="pt-6">
-                <a href="#/assess" className="inline-flex items-center bg-white text-blue-600 px-12 py-5 rounded-[2rem] font-black text-xl shadow-2xl hover:scale-105 transition-transform">
+                <Link to="/diabetes-risk-assessment" className="inline-flex items-center bg-white text-blue-600 px-12 py-5 rounded-[2rem] font-black text-xl shadow-2xl hover:scale-105 transition-transform">
                    Start Simulation
                    <ArrowRight className="ml-3 w-6 h-6" />
-                </a>
+                </Link>
              </div>
           </div>
         </div>

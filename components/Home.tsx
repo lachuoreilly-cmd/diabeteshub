@@ -13,7 +13,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section (reduced height) */}
-  <section className="relative overflow-hidden pt-8 pb-8 lg:pt-16 lg:pb-20 bg-gradient-to-b from-blue-50 to-white">
+  <section className="relative overflow-hidden pt-4 pb-8 lg:pt-16 lg:pb-20 bg-gradient-to-b from-blue-50 to-white">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl">
           <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-200/20 rounded-full blur-[120px]"></div>
           <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-200/20 rounded-full blur-[120px]"></div>
@@ -37,7 +37,7 @@ const Home: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row justify-center gap-3 pt-3 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500">
               <Link
-                to="/assess"
+                to="/diabetes-risk-assessment"
                 className="group relative inline-flex items-center justify-center px-8 py-3 text-base font-black text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg shadow-blue-500/30 overflow-hidden"
               >
                 Launch Assessment
@@ -105,7 +105,7 @@ const Home: React.FC = () => {
                 />
               </div>
 
-              <Link to="/education" className="inline-flex items-center space-x-2 text-indigo-600 font-black uppercase text-sm tracking-widest group">
+              <Link to="/diabetes-education" className="inline-flex items-center space-x-2 text-indigo-600 font-black uppercase text-sm tracking-widest group">
                 <span>Explore the Academy</span>
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -113,7 +113,7 @@ const Home: React.FC = () => {
 
             <div className="relative">
               <div className="absolute inset-0 bg-indigo-600/5 blur-[60px] rounded-full"></div>
-              <Link to="/education" className="relative bg-slate-50 rounded-2xl p-3 shadow-lg border border-blue-100 w-full max-w-[420px] mx-auto aspect-square flex items-center justify-center group overflow-hidden block">
+              <Link to="/diabetes-education" className="relative bg-slate-50 rounded-2xl p-3 shadow-lg border border-blue-100 w-full max-w-[420px] mx-auto aspect-square flex items-center justify-center group overflow-hidden block">
                 <div className="absolute inset-0 opacity-20 group-hover:scale-110 transition-transform duration-1000">
                   <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover" alt="Education" />
                 </div>

@@ -5,18 +5,22 @@ interface InactivityTimeoutProps {
   timeoutDuration?: number;
 }
 
-const InactivityTimeout: React.FC<InactivityTimeoutProps> = ({ onTimeout, timeoutDuration = 10 * 60 * 1000 }) => {
+const InactivityTimeout: React.FC<InactivityTimeoutProps> = ({ onTimeout, timeoutDuration = 15 * 60 * 1000 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetTimeout = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
+    
+    // Save last activity to localStorage for persistence across refreshes
+    localStorage.setItem('lastActivity', Date.now().toString());
+    
     timeoutRef.current = setTimeout(onTimeout, timeoutDuration);
   };
 
   useEffect(() => {
-    const events: (keyof WindowEventMap)[] = ['mousemove', 'keydown', 'scroll', 'touchstart'];
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
 
     const reset = () => resetTimeout();
 

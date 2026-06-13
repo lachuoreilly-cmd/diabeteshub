@@ -217,12 +217,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
     setProfileToDeleteId(null);
   };
 
-  const handleExport = () => {
-    const url = db.exportData();
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `diabetes_hub_backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
+  const handleExport = async () => {
+    try {
+      const json = await db.exportData();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `diabetes_hub_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
   };
 
   const getMedCategoryStyles = (type: string) => {

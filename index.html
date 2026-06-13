@@ -6,8 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diabetes Hub - Health Management & Simulation</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style type="text/tailwindcss">
+      @layer base {
+        .prose {
+          @apply text-slate-600 leading-relaxed;
+        }
+        .prose h1, .prose h2, .prose h3, .prose h4 {
+          @apply font-black tracking-tight text-slate-900 mt-6 mb-3;
+        }
+        .prose strong {
+          @apply font-bold text-slate-900;
+        }
+        /* Prose Invert for Dark Backgrounds */
+        .prose-invert {
+          @apply text-slate-300;
+        }
+        .prose-invert h1, .prose-invert h2, .prose-invert h3, .prose-invert h4 {
+          @apply text-white;
+        }
+        .prose-invert strong {
+          @apply text-white font-bold;
+        }
+      }
+    </style>
     <script>
       tailwind.config = {
         darkMode: 'class',

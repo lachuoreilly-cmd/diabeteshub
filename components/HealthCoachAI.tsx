@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Bot, Send, Sparkles, User, Loader2, Info, ArrowLeft, RefreshCcw, Lightbulb, Apple, Dumbbell } from 'lucide-react';
-import { getAI } from '../services/geminiService';
+import { sendChatMessage } from '../services/geminiService';
 import { User as UserType, Profile } from '../types';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   role: 'user' | 'model';
@@ -15,12 +16,57 @@ interface HealthCoachProps {
 }
 
 const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: `Hello ${user ? user.name.split(' ')[0] : 'there'}! I'm your Health Coach. I'm here to help you understand your metabolic risk. What's on your mind?` }
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('health_coach_messages') || localStorage.getItem('health_coach_messages');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Failed to load saved coach messages", e);
+    }
+    return [
+      { role: 'model', text: `Hello ${user ? user.name.split(' ')[0] : 'there'}! I'm your Health Coach. I'm here to help you understand your metabolic risk. What's on your mind?` }
+    ];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLHeadingElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      const serialized = JSON.stringify(messages);
+      sessionStorage.setItem('health_coach_messages', serialized);
+      localStorage.setItem('health_coach_messages', serialized);
+    } catch (e) {
+      console.error("Failed to save coach messages", e);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    // Determine if there is user-initiated conversation in the widget
+    const hasConversations = messages.some(msg => msg.role === 'user');
+
+    const timer = setTimeout(() => {
+      if (!hasConversations) {
+        if (headerRef.current) {
+          headerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          headerRef.current.focus({ preventScroll: true });
+        }
+      } else {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+        if (inputRef.current) {
+          inputRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          inputRef.current.focus({ preventScroll: true });
+        }
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -36,7 +82,8 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
     }
 
     // For new model messages, scroll the new message into view.
-    if (lastMessage?.role === 'model' && !isLoading) {
+    // Only perform for index > 0 to avoid messing up the initial card alignment.
+    if (lastMessage?.role === 'model' && !isLoading && lastMessageIndex > 0) {
         const lastMessageElement = scrollRef.current.querySelector(`#message-${lastMessageIndex}`);
         if (lastMessageElement) {
             // The 'block: start' option aligns the top of the element with the top of the scroll container.
@@ -49,47 +96,6 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
     }
 }, [messages, isLoading]);
 
-  // Lightweight, safe-ish markdown -> HTML renderer to avoid adding a new dependency.
-  // Covers headings (###), bold (**text**), italic (*text*), unordered lists (- or *),
-  // and paragraphs / line breaks. Escapes HTML to reduce XSS risk.
-  const escapeHtml = (unsafe: string) => {
-    return unsafe
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  };
-
-  const renderMarkdown = (md: string) => {
-    if (!md) return '';
-    // Normalize line endings
-    let out = escapeHtml(md);
-
-    // Headings: ###
-    out = out.replace(/^###\s*(.+)$/gim, '<h4 class="text-sm font-black text-slate-700 mt-4 mb-2">$1</h4>');
-    out = out.replace(/^##\s*(.+)$/gim, '<h3 class="text-base font-black text-slate-800 mt-4 mb-2">$1</h3>');
-    out = out.replace(/^#\s*(.+)$/gim, '<h2 class="text-lg font-black text-slate-900 mt-4 mb-2">$1</h2>');
-
-    // Bold and italic (handle bold first)
-    out = out.replace(/\*\*([^\*]+)\*\*/gim, '<strong class="font-black">$1</strong>');
-    out = out.replace(/\*([^\*]+)\*/gim, '<em class="italic">$1</em>');
-
-    // Unordered lists: lines starting with - or *
-    // Convert consecutive list lines into a single <ul>
-    out = out.replace(/(^|\n)([ \t]*([-\*])\s+.+(\n[ \t]*([-\*])\s+.+)*)/gim, (match) => {
-      const items = match.split(/\n/).map(l => l.replace(/^\s*([-\*])\s+/, '').trim()).filter(Boolean);
-      if (!items.length) return match;
-      return '\n<ul class="list-disc list-inside mt-2 mb-2">' + items.map(i => `<li class="text-sm leading-relaxed">${i}</li>`).join('') + '</ul>\n';
-    });
-
-    // Paragraphs: split on two or more newlines
-    const paragraphs = out.split(/\n{2,}/g).map(p => p.trim()).filter(Boolean);
-    out = paragraphs.map(p => `<p class="text-sm text-slate-700 leading-relaxed mb-3">${p.replace(/\n/g, '<br/>')}</p>`).join('');
-
-    return out;
-  };
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -99,15 +105,6 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
     setIsLoading(true);
 
     try {
-      let ai;
-      try {
-        ai = await getAI();
-      } catch (initErr) {
-        console.error('AI initialization error:', initErr);
-        setMessages(prev => [...prev, { role: 'model', text: "The health coach cannot start because the AI API key is missing or invalid. Please check app configuration." }]);
-        setIsLoading(false);
-        return;
-      }
       const latestAssessment = activeProfile?.history[0];
       const systemInstruction = `
         You are a professional, empathetic, and knowledgeable Diabetes Health Coach. 
@@ -121,24 +118,19 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
         3. ALWAYS include a small disclaimer that you are an educational tool.
       `;
 
-      const chat = ai.chats.create({ model: 'gemini-3-flash-preview', config: { systemInstruction } });
+      const responseText = await sendChatMessage(
+        [...messages, { role: 'user', text: userMessage }],
+        systemInstruction
+      );
 
-      // Protect against long SDK lazy-loads by racing with a timeout
-      const sendPromise = chat.sendMessage({ message: userMessage });
-      const timeoutMs = 12000; // 12s
-      const response = await Promise.race([
-        sendPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('AI SDK timed out while sending message')), timeoutMs))
-      ]);
-      const responseText = response?.text || "I couldn't process that. Please try rephrasing.";
       setMessages(prev => [...prev, { role: 'model', text: responseText }]);
     } catch (error: any) {
       console.error("Coach error:", error);
       const message = error?.message || String(error);
       if (message.includes('timed out') || message.includes('SDK')) {
-        setMessages(prev => [...prev, { role: 'model', text: "The Health Coach is taking longer than expected to respond. Please check your network or try again shortly." }]);
+        setMessages(prev => [...prev, { role: 'model', text: `The Health Coach is taking longer than expected to respond. Please check your network or try again shortly. (${message})` }]);
       } else {
-        setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to my knowledge base. Please try again." }]);
+        setMessages(prev => [...prev, { role: 'model', text: `I'm having trouble connecting to my knowledge base: ${message}. Please try again.` }]);
       }
     } finally {
       setIsLoading(false);
@@ -155,7 +147,7 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
               <Bot className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-black">Health Coach</h2>
+              <h2 ref={headerRef} tabIndex={-1} className="text-xl font-black outline-none">Health Coach</h2>
               <p className="text-xs text-blue-600 font-bold">Live Clinical AI</p>
             </div>
           </div>
@@ -177,7 +169,9 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
                 {msg.role === 'user' ? (
                   msg.text
                 ) : (
-                  <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
+                  <div className="prose prose-slate max-w-none prose-p:leading-relaxed prose-headings:text-slate-900 prose-strong:text-slate-900 prose-headings:mt-4 prose-headings:mb-2 text-sm">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
                 )}
               </div>
             </div>
@@ -196,6 +190,7 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
         <div className="p-6 bg-white border-t border-blue-50 shrink-0">
           <div className="relative">
             <input 
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}

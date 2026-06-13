@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { analyzeHealthData } from '../services/geminiService';
 import { HealthData, AssessmentResult, User, Profile } from '../types';
 import ResultsDashboard from './ResultsDashboard';
@@ -27,6 +27,32 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   const [result, setResult] = useState<AssessmentResult | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (!result) {
+      const timer = setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (headerRef.current) {
+          headerRef.current.focus({ preventScroll: true });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [result]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (headerRef.current) {
+      headerRef.current.focus({ preventScroll: true });
+    }
+  }, [step]);
 
   const [formData, setFormData] = useState<HealthData>({
     age: 30,
@@ -198,13 +224,17 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
       onComplete(assessment, formData);
     } catch (error: any) {
       console.error(error);
-      if (error?.message?.includes("Requested entity was not found.")) {
+      const errorMessage = error?.message || "";
+      
+      if (errorMessage.includes("Requested entity was not found.")) {
          alert("API Key error. Please select a valid key from a paid project (ai.google.dev/gemini-api/docs/billing).");
          if ((window as any)?.aistudio && typeof (window as any).aistudio.openSelectKey === 'function') {
            await (window as any).aistudio.openSelectKey();
          }
+      } else if (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("spending cap")) {
+         alert("API Quota exceeded or spending cap reached. Please check your AI Studio billing settings or try again later.");
       } else {
-         alert("Analysis failed. Please try again.");
+         alert("Analysis failed: " + (errorMessage || "Unknown error") + ". Please try again.");
       }
     } finally {
       setLoading(false);
@@ -234,13 +264,13 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 bg-white">
+    <div ref={containerRef} className="scroll-mt-24 sm:scroll-mt-28 outline-none max-w-7xl mx-auto px-4 py-12 bg-white">
       <div className="bg-blue-50/30 rounded-[3rem] shadow-sm overflow-hidden border border-blue-100">
         {/* Header */}
         <div className="bg-white border-b border-blue-50 px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="text-center md:text-left">
-              <h2 className="text-3xl font-black tracking-tight text-slate-900">Health Intake Engine</h2>
+              <h2 ref={headerRef} tabIndex={-1} className="text-3xl font-black tracking-tight text-slate-900 outline-none">Health Intake Engine</h2>
               <p className="mt-1 text-slate-500 font-medium">Input clinical variables for HbA1c forecasting.</p>
             </div>
             <div className="flex items-center space-x-3">
@@ -259,12 +289,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   <form onSubmit={handleSubmit} className="p-6 sm:p-8 lg:p-14">
           {/* STEP 1: Biometrics & Anthropometrics */}
           {step === 1 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center space-x-4 text-blue-600">
                 <div className="p-3 bg-blue-100/50 rounded-2xl"><Globe className="w-6 h-6" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Biometrics & Anthropometrics</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-14">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
                 <div className="space-y-1">
                   <Label text="Age" />
                   <input type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses('age')} />
@@ -310,13 +340,13 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
           {/* STEP 2: Clinical Markers & Known Labs */}
           {step === 2 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center space-x-4 text-indigo-700">
                 <div className="p-3 bg-indigo-50 rounded-2xl"><Beaker className="w-6 h-6" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Clinical Markers & Labs</h3>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                <div className="space-y-10">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-8">
                   <div className="grid grid-cols-2 gap-8">
                     <div>
                       <Label text="Systolic BP" sub="Upper Number" />
@@ -340,7 +370,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     </div>
                   </div>
                 </div>
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 space-y-8 shadow-sm">
+                <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 space-y-6 shadow-sm">
                   <div className="flex items-center space-x-3 text-indigo-600 mb-2">
                     <History className="w-5 h-5" />
                     <span className="text-xs font-black uppercase tracking-widest">Recent Lab Diagnostics</span>
@@ -361,7 +391,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
           {/* STEP 3: Lifestyle Stressors */}
           {step === 3 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center space-x-4 text-indigo-600">
                 <div className="p-3 bg-indigo-100/50 rounded-2xl"><Moon className="w-6 h-6" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Metabolic Stressors</h3>
@@ -408,13 +438,13 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
           {/* STEP 4: Nutrition & Activity */}
           {step === 4 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center space-x-4 text-emerald-700">
                 <div className="p-3 bg-emerald-50 rounded-2xl"><Utensils className="w-6 h-6" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Nutrition & Physical Load</h3>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                <div className="space-y-10">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-8">
                   <div>
                     <Label text="Dietary Preference" />
                     <div className="grid grid-cols-2 gap-4">
@@ -436,7 +466,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                     </select>
                   </div>
                 </div>
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 space-y-8 shadow-sm">
+                <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 space-y-6 shadow-sm">
                   <div className="flex items-center space-x-3 text-slate-700 mb-2">
                     <Sparkles className="w-5 h-5" />
                     <span className="text-xs font-black uppercase tracking-widest">Nutritional Survey</span>
@@ -473,12 +503,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
 
           {/* STEP 5: Final Confirmation */}
           {step === 5 && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center space-x-4 text-blue-600">
                 <div className="p-3 bg-blue-100/50 rounded-2xl"><CheckCircle2 className="w-5 h-5" /></div>
                 <h3 className="font-black uppercase text-base tracking-widest">Final Calculation</h3>
               </div>
-              <div className="text-center py-16 space-y-10 bg-white rounded-[4rem] border border-blue-50 shadow-inner">
+              <div className="text-center py-10 space-y-6 bg-white rounded-3xl border border-blue-50 shadow-inner">
                 <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
                    <ShieldCheck className="w-12 h-12 text-blue-600" />
                 </div>
@@ -493,7 +523,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
           )}
 
           {/* Navigation */}
-          <div className="mt-20 flex flex-col sm:flex-row items-center justify-between border-t border-blue-50 pt-12 gap-8">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-between border-t border-blue-50 pt-8 gap-6">
             {step > 1 ? (
               <button type="button" onClick={() => setStep(step - 1)} className="flex items-center space-x-3 text-slate-400 font-black px-10 py-5 hover:bg-slate-50 rounded-2xl transition-all">
                 <ChevronLeft className="w-6 h-6" />

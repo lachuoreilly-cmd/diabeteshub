@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isDemoUser(userId) {
+      return userId == 'demo-user';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'email', 'name', 'profiles', 'activeProfileId'])
+        && data.id is string
+        && data.email is string
+        && data.name is string
+        && data.profiles is list
+        && data.activeProfileId is string
+        // Identity Integrity
+        && (data.id == request.auth.uid || data.id == 'demo-user')
+        // Size guards
+        && data.name.size() <= 100
+        && data.email.size() <= 150
+        && data.profiles.size() <= 50;
+    }
+
+    // --- Collection Rules ---
+    
+    // Connectivity test path
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      // Path Variable Hardening
+      // allow get: if isValidId(userId) && (isOwner(userId) || isDemoUser(userId));
+      
+      // We allow reading own data. 
+      // For demo-user, we allow reading if signed in as demo or during seeding.
+      allow read: if isOwner(userId) || isDemoUser(userId);
+      
+      allow create: if isSignedIn() 
+        && isValidId(userId) 
+        && (userId == request.auth.uid || isDemoUser(userId))
+        && isValidUser(incoming());
+
+      allow update: if isOwner(userId)
+        && isValidUser(incoming())
+        && incoming().id == existing().id
+        && incoming().email == existing().email; // Email is immutable
+
+      allow delete: if isOwner(userId);
+    }
+  }
+}

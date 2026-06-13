@@ -10,6 +10,7 @@ import {
   Clock, CheckCircle2, X, Wind, Sun, Coffee, BrainCircuit,
   Target, AlertTriangle, CheckCircle, ShieldCheck, ZapOff
 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Profile } from '../types';
 
 interface LifestyleInsightsProps {
@@ -18,6 +19,7 @@ interface LifestyleInsightsProps {
 
 const LifestyleInsights: React.FC<LifestyleInsightsProps> = ({ activeProfile }) => {
   const [isResilienceModalOpen, setIsResilienceModalOpen] = useState(false);
+  const navigate = useNavigate();
   const latestAssessment = activeProfile.history[0];
   
   if (!latestAssessment) {
@@ -28,7 +30,7 @@ const LifestyleInsights: React.FC<LifestyleInsightsProps> = ({ activeProfile }) 
         </div>
         <h2 className="text-3xl font-black">No Insights Available</h2>
         <p className="text-slate-500 font-medium">Please complete a health assessment first to generate data visualizations.</p>
-        <a href="#/assess" className="inline-block px-10 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl">Start Assessment</a>
+        <Link to="/diabetes-risk-assessment" className="inline-block px-10 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl">Start Assessment</Link>
       </div>
     );
   }
@@ -151,7 +153,7 @@ const LifestyleInsights: React.FC<LifestyleInsightsProps> = ({ activeProfile }) 
                      dataKey="name" 
                      axisLine={false} 
                      tickLine={false} 
-                     tick={{ fontSize: 12, fontWeight: 900, fill: '#64748b', textTransform: 'uppercase' }} 
+                     tick={{ fontSize: 12, fontWeight: 900, fill: '#64748b' }} 
                    />
                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} domain={[0, 100]} />
                    <Tooltip content={<CustomHabitTooltip />} cursor={{ fill: '#f8fafc' }} />
@@ -413,7 +415,7 @@ const LifestyleInsights: React.FC<LifestyleInsightsProps> = ({ activeProfile }) 
                     "Based on your 15% increase in physical activity over the last 14 days, we project a potential decrease of your next HbA1c result by 0.3%."
                   </p>
                </div>
-               <button onClick={() => window.location.hash = '#/assess'} className="px-10 py-5 bg-white text-blue-600 font-black rounded-3xl shadow-2xl shadow-blue-900/40 whitespace-nowrap active:scale-95 transition-transform">
+               <button onClick={() => navigate('/diabetes-risk-assessment')} className="px-10 py-5 bg-white text-blue-600 font-black rounded-3xl shadow-2xl shadow-blue-900/40 whitespace-nowrap active:scale-95 transition-transform">
                   Update Assessment
                </button>
             </div>

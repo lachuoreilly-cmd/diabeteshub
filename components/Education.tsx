@@ -8,7 +8,7 @@ import {
   Search, ExternalLink, Loader2, Scale, Youtube, Video, Copy, Maximize2,
   AlertTriangle, FileText, Globe
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getFoodGIInfo, findEducationalArticles } from '../services/geminiService';
 
 import ReactMarkdown from 'react-markdown';
@@ -25,6 +25,7 @@ interface ParsedArticleResult {
 }
 
 const Education: React.FC = () => {
+  const location = useLocation();
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -37,17 +38,33 @@ const Education: React.FC = () => {
   const [loadingStage, setLoadingStage] = useState(0);
   const [lastRequestTime, setLastRequestTime] = useState(0);
 
-  const widgetRef = useRef<HTMLElement>(null);
+  const discoveryRef = useRef<HTMLElement>(null);
+  const giExplorerRef = useRef<HTMLElement>(null);
+  const qaRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const focusTarget = query.get('focus');
+
+    // Wait slightly for DOM and layout to stabilize
     const timer = setTimeout(() => {
-      if (widgetRef.current) {
-        widgetRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        widgetRef.current.focus({ preventScroll: true });
+      if (focusTarget === 'ai-discovery' && discoveryRef.current) {
+        discoveryRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        discoveryRef.current.focus({ preventScroll: true });
+      } else if (focusTarget === 'gi-analysis' && giExplorerRef.current) {
+        giExplorerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        giExplorerRef.current.focus({ preventScroll: true });
+      } else if (focusTarget === 'physician-qa' && qaRef.current) {
+        qaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        qaRef.current.focus({ preventScroll: true });
+      } else {
+        // If no matching focus parameter, scroll cleanly to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }, 150);
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [location]);
 
   const COOLDOWN_MS = 5000; // 5 second cooldown per search
 
@@ -180,19 +197,18 @@ const Education: React.FC = () => {
     <div className="min-h-screen bg-white space-y-12 pb-32 animate-in fade-in duration-700 overflow-x-hidden w-full">
 
       {/* Academy Hero - More Compact */}
-      <div className="px-4 pt-4 md:pt-8 w-full max-w-[100vw]">
-        <header className="relative pt-12 pb-24 md:pt-16 md:pb-32 overflow-hidden rounded-[2rem] md:rounded-[3rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+      <div className="px-4 pt-4 md:pt-6 w-full max-w-[100vw]">
+        <header id="educational-academy-header" className="relative pt-8 pb-16 sm:pt-10 sm:pb-20 md:pt-12 md:pb-24 overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
           <div className="absolute top-0 right-0 w-1/2 h-full bg-white/10 blur-[120px] rounded-full translate-x-1/2"></div>
           <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 text-center min-w-0">
-            <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full mb-6 max-w-full">
-              <Sparkles className="w-4 h-4 text-blue-300 shrink-0" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-blue-100 truncate">Educational Academy</span>
+            <div className="inline-flex items-center space-x-2 px-2.5 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full mb-3 sm:mb-4 max-w-full">
+              <Sparkles className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-blue-100 truncate">Educational Academy</span>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-[1.1] md:leading-[0.9] mb-4 break-words">
-              Knowledge is <br className="hidden md:block"/>
-              <span className="text-blue-200">Your Primary Defense.</span>
+            <h1 id="educational-academy-title" className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter leading-tight mb-2 break-words">
+              Knowledge is <span className="text-blue-200">Your Primary Defense.</span>
             </h1>
-            <p className="text-base md:text-lg text-blue-50 font-medium leading-relaxed mb-4 max-w-2xl mx-auto px-2">
+            <p className="text-xs sm:text-sm md:text-base text-blue-50 font-medium leading-relaxed max-w-xl mx-auto px-2">
               Unlock the science of your metabolism with our evidence-based clinical discovery tools.
             </p>
           </div>
@@ -200,8 +216,8 @@ const Education: React.FC = () => {
       </div>
 
       {/* AI Article Discovery SECTION */}
-      <section ref={widgetRef} tabIndex={-1} className="scroll-mt-24 sm:scroll-mt-28 outline-none max-w-7xl mx-auto px-4 -mt-16 md:-mt-24 relative z-20 w-full max-w-[100vw]">
-        <div className="bg-slate-900 rounded-[2rem] md:rounded-[4rem] p-6 sm:p-8 md:p-16 text-white relative overflow-hidden shadow-2xl border-2 md:border-4 border-white w-full">
+      <section id="ai-knowledge-discovery" ref={discoveryRef} tabIndex={-1} className="scroll-mt-24 sm:scroll-mt-28 outline-none max-w-7xl mx-auto px-4 -mt-10 sm:-mt-14 md:-mt-16 relative z-20 w-full max-w-[100vw]">
+        <div className="bg-slate-900 rounded-2xl md:rounded-3xl p-5 sm:p-8 md:p-12 text-white relative overflow-hidden shadow-2xl border-2 border-white w-full">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
 
           <div className="relative z-10 grid gap-8 md:gap-16 items-center min-w-0 w-full">
@@ -311,7 +327,7 @@ const Education: React.FC = () => {
       </section>
 
       {/* Metabolic Food Explorer SECTION */}
-      <section className="max-w-7xl mx-auto px-4 relative pt-12 md:pt-16 w-full max-w-[100vw]">
+      <section id="metabolic-food-explorer" ref={giExplorerRef} tabIndex={-1} className="scroll-mt-24 sm:scroll-mt-28 outline-none max-w-7xl mx-auto px-4 relative pt-12 md:pt-16 w-full max-w-[100vw]">
         <div className="bg-blue-50/50 rounded-[2rem] md:rounded-[4rem] shadow-sm border border-blue-100 p-6 sm:p-8 md:p-16 relative overflow-hidden transition-colors w-full">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white via-transparent to-transparent pointer-events-none"></div>
 
@@ -321,7 +337,7 @@ const Education: React.FC = () => {
                 <Search className="w-5 h-5 shrink-0" />
                 <span className="break-words">Metabolic Food Explorer</span>
               </div>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 leading-tight break-words">
+              <h2 id="metabolic-food-explorer-title" className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 leading-tight break-words">
                 Instantly Analyze <br className="hidden sm:block" />Any Food's GI.
               </h2>
               <p className="text-lg text-slate-600 font-medium leading-relaxed">
@@ -460,7 +476,7 @@ const Education: React.FC = () => {
       </section>
 
       {/* Expert Q&A Accordion */}
-      <section className="bg-blue-50/30 py-16 md:py-24 transition-colors w-full px-4 overflow-hidden">
+      <section ref={qaRef} tabIndex={-1} className="scroll-mt-24 sm:scroll-mt-28 outline-none bg-blue-50/30 py-16 md:py-24 transition-colors w-full px-4 overflow-hidden">
         <div className="max-w-4xl mx-auto w-full">
           <div className="text-center space-y-4 md:space-y-6 mb-12 md:mb-16 px-2">
             <HelpCircle className="w-12 h-12 md:w-14 md:h-14 text-blue-600 mx-auto" />

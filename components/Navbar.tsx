@@ -19,6 +19,12 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  React.useEffect(() => {
+    if (!user) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [user]);
+
   const navLinks = [
     { path: '/', label: 'Home', icon: Home },
     { path: '/diabetes-education', label: 'Academy', icon: BookOpen },
@@ -83,10 +89,22 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
             {navLinks.map((link) => (
               <NavItem key={link.path} {...link} />
             ))}
+            {!user && (
+              <div className="pt-4 px-2">
+                <Link
+                  to="/auth"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center space-x-3 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95"
+                >
+                  <span>Sign In</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-slate-50">
-            {user ? (
+          {user && (
+            <div className="mt-auto pt-6 border-t border-slate-50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100 mb-4">
                    <div className="flex items-center space-x-2">
@@ -113,27 +131,21 @@ const Navbar: React.FC<NavbarProps> = ({ user, activeProfile, onLogout }) => {
                 </div>
 
                 <button
-                  onClick={onLogout}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onLogout();
+                  }}
                   className="w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded-2xl border border-slate-100 transition-all group"
                 >
                   <div className="flex items-center space-x-3">
                     <LogOut className="w-4 h-4" />
-                    <span className="text-xs font-black uppercase tracking-widest">Terminate Session</span>
+                    <span className="text-xs font-black uppercase tracking-widest">Sign Out</span>
                   </div>
                   <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </button>
               </div>
-            ) : (
-              <Link
-                to="/auth"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center space-x-3 py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95"
-              >
-                <span>Sign In</span>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </aside>
 

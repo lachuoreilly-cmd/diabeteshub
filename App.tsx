@@ -19,6 +19,7 @@ import TermsOfService from './components/TermsOfService';
 import { db } from './services/database';
 import { User, AssessmentResult, Profile, HealthData } from './types';
 import ScrollToTop from './components/ScrollToTop';
+import { FeedbackModal } from './components/FeedbackModal';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode, user: User | null, loading: boolean }> = ({ children, user, loading }) => {
   if (loading) return null; // Let the main loading screen handle it
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   });
   const [isOnline, setIsOnline] = useState(true);
   const [guestResult, setGuestResult] = useState<{ result: AssessmentResult, data: HealthData } | null>(null);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -125,7 +127,7 @@ const App: React.FC = () => {
     }
     await db.logout();
     setUser(null);
-    navigate('/auth');
+    navigate('/');
   };
 
   const updateUser = async (update: Partial<User>) => {
@@ -200,13 +202,14 @@ const App: React.FC = () => {
           onLogout={handleLogout} 
         />
         
-        <div className="flex-grow flex flex-col lg:pl-72 transition-all duration-300">
+        <div className="flex-grow flex flex-col w-full max-w-full min-w-0 pt-16 lg:pt-0 lg:pl-72 transition-all duration-300">
+          <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} user={user} />
           <AppTutorial />
           <BrandBanner />
 
           <main className="flex-grow pt-2 lg:pt-0">
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<Home user={user} />} />
               <Route path="/diabetes-education" element={<Education />} />
               <Route path="/coach" element={<HealthCoach user={user} activeProfile={activeProfile} />} />
               <Route path="/dashboard" element={<ProtectedRoute user={user} loading={loading}>{activeProfile && <Dashboard user={user} activeProfile={activeProfile} onUpdateUser={updateUser} onUpdateProfile={updateActiveProfile} />}</ProtectedRoute>} />
@@ -228,14 +231,11 @@ const App: React.FC = () => {
                     <a href="/privacy-policy" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Privacy Policy</a>
                     <span className="text-slate-300">|</span>
                     <a href="/terms-of-service" className="font-bold text-slate-600 hover:text-blue-600 transition-colors">Terms of Service</a>
+                    <span className="text-slate-300">|</span>
+                    <button id="footer-feedback-btn" onClick={() => setIsFeedbackOpen(true)} className="font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer focus:outline-none">Contact &amp; Feedback</button>
                 </div>
 
-                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-blue-100 rounded-full shadow-sm">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demo Login:</span>
-                    <code className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">demo@diabetes-companion.ai</code>
-                </div>
-                
-                <p className="text-sm font-bold text-slate-600">&copy; 2024 Diabetes Companion. All Rights Reserved.</p>
+                <p className="text-sm font-bold text-slate-600">&copy; 2026 Diabetes Companion. All Rights Reserved.</p>
 
                 <p className="text-xs text-slate-400 max-w-3xl mx-auto leading-relaxed">
                     <strong className="font-black text-slate-500">Medical Disclaimer:</strong> This application is for informational and educational purposes only. It is not intended to provide medical advice or to be a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.

@@ -190,8 +190,46 @@ export async function getEthnicMealRecommendations(ethnicity: string, preference
 /**
  * Generate exercise plans based on health data.
  */
-export async function getPersonalizedExercisePlans(assessment: AssessmentResult, age: number, equipment: string[]): Promise<ExercisePlan[]> {
-  const prompt = `Generate 3 customized metabolic exercise plans for a user with status: ${assessment.status}, risk level: ${assessment.riskLevel}, age: ${age}, equipment: ${equipment.join(', ') || 'none'}. Return ONLY a JSON object with a "plans" array.`;
+export async function getPersonalizedExercisePlans(
+  assessment: AssessmentResult, 
+  age: number, 
+  equipment: string[],
+  glucoseLogs: any[] = [],
+  completedSessions: any[] = [],
+  mealLogs: any[] = []
+): Promise<ExercisePlan[]> {
+  const glucoseSummary = glucoseLogs.length > 0 
+    ? `Recent blood glucose logs: ${glucoseLogs.slice(0, 5).map(l => `${l.type}: ${l.value} mg/dL`).join(', ')}.`
+    : `No blood glucose logs entered yet.`;
+  
+  const exerciseSummary = completedSessions.length > 0
+    ? `Recently completed exercise sessions: ${completedSessions.slice(0, 5).map(s => `${s.planName} (${s.duration} mins)`).join(', ')}.`
+    : `No completed exercise sessions logged.`;
+
+  const mealSummary = mealLogs.length > 0
+    ? `Recent meal logs: ${mealLogs.slice(0, 5).map(m => `${m.type}: ${m.description} (${m.analysis?.calories || 'N/A'} kcal)`).join(', ')}.`
+    : `No meal logs entered yet.`;
+
+  const prompt = `Generate 3 completely customized, highly personalized metabolic exercise plans for a user.
+User profile & status:
+- Diabetes Status: ${assessment.status}
+- Diabetes Risk Level: ${assessment.riskLevel}
+- Age: ${age}
+- BMI: ${assessment.bmi || 'N/A'}
+- Available Equipment: ${equipment.join(', ') || 'none'}
+
+Dashboard and Tracking Context:
+1. Glucose Trends: ${glucoseSummary}
+2. Completed Exercises: ${exerciseSummary}
+3. Dietary Habits: ${mealSummary}
+
+Instructions:
+- Tailor the 3 recommended exercises directly to the user's specific state (e.g., if glucose is high, prioritize low-to-moderate exercises like walking or light resistance training; if pre-diabetic or fit, recommend aerobic or simple home strength structures).
+- Provide highly descriptive exercise plans with exact duration, exercises list (with duration, rest), and custom weekly schedules.
+- IMPORTANT (SIMPLICITY & READABILITY): Use extremely simple, clear, and warm language. Avoid intimidating medical jargon or complex fitness terms (e.g., do NOT say "Explosive glycogen-depletion intervals", instead say "Quick fun energy bursts". Do NOT say "Isometric muscular endurance drills", instead say "Steady holds for strength". Do NOT say "High-intensity anaerobic circuit", instead say "Gentle heart-pumping activity"). Keep titles and step names short, encouraging, and very easy to understand for anyone.
+- IMPORTANT (WEEKLY SCHEDULE FORMATTING): In the generated "weeklySchedule", the "day" field MUST be exactly one of the following 3-letter abbreviations: "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", or the word "Daily". Do NOT write full names like "Monday" or other formats. This ensures it maps perfectly to the user's weekly timeline tracker.
+
+Return ONLY a JSON object with a "plans" array.`;
   
   const response = await ai.models.generateContent({
     model: "gemini-3.5-flash",
@@ -316,4 +354,42 @@ export async function getSources(topic: string): Promise<{ summary: string; sour
     summary, 
     sources: Array.from(sourcesMap.entries()).map(([uri, data]) => ({ uri, ...data })) 
   };
+}
+
+/**
+ * Generate an image using gemini-3.1-flash-image (the recommended migration path)
+ */
+export async function generateImage(prompt: string, imageSize: "512px" | "1K" | "2K" | "4K" = "1K", aspectRatio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9" = "16:9"): Promise<{ imageUrl: string }> {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash-image',
+      contents: {
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: aspectRatio,
+          imageSize: imageSize
+        }
+      },
+    });
+
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          const base64EncodeString = part.inlineData.data;
+          const imageUrl = `data:${part.inlineData.mimeType || 'image/png'};base64,${base64EncodeString}`;
+          return { imageUrl };
+        }
+      }
+    }
+    throw new Error("No image data returned in response parts");
+  } catch (error: any) {
+    console.error("Image generation error:", error);
+    throw error;
+  }
 }

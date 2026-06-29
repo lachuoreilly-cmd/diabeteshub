@@ -14,7 +14,10 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isSignedIn() && (
+        request.auth.uid == userId ||
+        (userId == 'demo-user' && request.auth.token.email == 'demo@diabetes-companion.ai')
+      );
     }
 
     function isDemoUser(userId) {
@@ -22,7 +25,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
     }
 
     function incoming() {
@@ -50,11 +53,27 @@ service cloud.firestore {
         && data.profiles.size() <= 50;
     }
 
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'message', 'category', 'createdAt'])
+        && data.id is string
+        && data.name is string
+        && data.email is string
+        && data.message is string
+        && data.category is string
+        && data.name.size() <= 150
+        && data.email.size() <= 200
+        && data.message.size() <= 6000;
+    }
+
     // --- Collection Rules ---
     
     // Connectivity test path
     match /test/connection {
       allow read: if true;
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if isValidId(feedbackId) && isValidFeedback(incoming());
     }
 
     match /users/{userId} {

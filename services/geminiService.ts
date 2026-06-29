@@ -52,8 +52,15 @@ export async function getEthnicMealRecommendations(ethnicity: string, preference
 /**
  * Generate exercise plans based on health data.
  */
-export async function getPersonalizedExercisePlans(assessment: AssessmentResult, age: number, equipment: string[]): Promise<ExercisePlan[]> {
-  return fetchJson("/api/gemini/get-exercise-plans", { assessment, age, equipment });
+export async function getPersonalizedExercisePlans(
+  assessment: AssessmentResult, 
+  age: number, 
+  equipment: string[],
+  glucoseLogs?: any[],
+  completedSessions?: any[],
+  mealLogs?: any[]
+): Promise<ExercisePlan[]> {
+  return fetchJson("/api/gemini/get-exercise-plans", { assessment, age, equipment, glucoseLogs, completedSessions, mealLogs });
 }
 
 /**
@@ -82,11 +89,31 @@ export async function getSources(topic: string): Promise<{ summary: string; sour
 export const findEducationalArticles = getSources;
 
 export async function generateExerciseIllustration(exerciseName: string): Promise<string> {
-  return "/images/exercise-placeholder.svg";
+  try {
+    const data = await fetchJson("/api/gemini/generate-image", { 
+      prompt: `Clean, clear, medical clinical instruction diagram for the exercise: ${exerciseName}. Minimalist, vector-style, on plain pure white background, showcasing correct posture.`,
+      imageSize: "1K",
+      aspectRatio: "1:1"
+    });
+    return data.imageUrl;
+  } catch (error) {
+    console.error("Failed to generate exercise illustration, falling back:", error);
+    return "/images/exercise-placeholder.svg";
+  }
 }
 
 export async function generateHealthImage(prompt: string, imageSize: "1K" | "2K" | "4K"): Promise<string> {
-  return "/images/health-placeholder.svg";
+  try {
+    const data = await fetchJson("/api/gemini/generate-image", { 
+      prompt, 
+      imageSize,
+      aspectRatio: "16:9" 
+    });
+    return data.imageUrl;
+  } catch (error) {
+    console.error("Failed to generate health image, falling back:", error);
+    return "/images/health-placeholder.svg";
+  }
 }
 
 export async function generateExerciseVideo(base64: string, mimeType: string, prompt: string): Promise<string> {

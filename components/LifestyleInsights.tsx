@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend, ReferenceLine
@@ -21,6 +21,17 @@ const LifestyleInsights: React.FC<LifestyleInsightsProps> = ({ activeProfile }) 
   const [isResilienceModalOpen, setIsResilienceModalOpen] = useState(false);
   const navigate = useNavigate();
   const latestAssessment = activeProfile.history[0];
+
+  useEffect(() => {
+    if (isResilienceModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isResilienceModalOpen]);
   
   if (!latestAssessment) {
     return (
@@ -113,10 +124,10 @@ const LifestyleInsights: React.FC<LifestyleInsightsProps> = ({ activeProfile }) 
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-12 pb-32">
+    <div id="lifestyle-insights-container" className="max-w-7xl mx-auto px-4 py-8 space-y-12 pb-32">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Lifestyle Insights</h1>
+          <h1 id="lifestyle-insights-title" className="text-4xl font-black text-slate-900 tracking-tight">Lifestyle Insights</h1>
           <p className="text-slate-500 mt-2 font-medium">Deep data analysis for <span className="text-blue-600 font-black">{activeProfile.name}</span></p>
         </div>
         <div className="flex gap-4">
@@ -424,72 +435,72 @@ const LifestyleInsights: React.FC<LifestyleInsightsProps> = ({ activeProfile }) 
 
       {/* Resilience Plan Modal */}
       {isResilienceModalOpen && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300" onClick={() => setIsResilienceModalOpen(false)}>
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col border border-blue-100 animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
-            <div className="p-8 md:p-12 bg-slate-900 text-white relative overflow-hidden shrink-0">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-300" onClick={() => setIsResilienceModalOpen(false)}>
+          <div className="bg-white w-full max-w-4xl max-h-[92dvh] sm:max-h-[90vh] rounded-3xl sm:rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col border border-blue-100 animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 sm:p-8 md:p-12 bg-slate-900 text-white relative overflow-hidden shrink-0">
                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-               <div className="relative z-10 flex justify-between items-start">
-                  <div className="space-y-2">
-                     <div className="inline-flex items-center space-x-2 text-blue-400 font-black uppercase text-[10px] tracking-widest">
-                        <BrainCircuit className="w-4 h-4" />
+               <div className="relative z-10 flex justify-between items-start gap-4">
+                  <div className="space-y-1 sm:space-y-2">
+                     <div className="inline-flex items-center space-x-2 text-blue-400 font-black uppercase text-[9px] sm:text-[10px] tracking-widest">
+                        <BrainCircuit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span>Intelligence Report</span>
                      </div>
-                     <h3 className="text-4xl font-black tracking-tight">Metabolic Resilience Plan</h3>
-                     <p className="text-slate-400 font-medium text-lg">Targeted protocols to neutralize stress-induced glucose spikes.</p>
+                     <h3 className="text-xl sm:text-2xl md:text-4xl font-black tracking-tight">Metabolic Resilience Plan</h3>
+                     <p className="text-slate-400 font-medium text-xs sm:text-sm md:text-lg">Targeted protocols to neutralize stress-induced glucose spikes.</p>
                   </div>
-                  <button onClick={() => setIsResilienceModalOpen(false)} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all">
-                     <X className="w-6 h-6" />
+                  <button onClick={() => setIsResilienceModalOpen(false)} className="p-2 sm:p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl sm:rounded-2xl transition-all shrink-0">
+                     <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                </div>
             </div>
-            <div className="flex-grow overflow-y-auto p-8 md:p-12 space-y-12 bg-slate-50/30">
-               <div className="grid md:grid-cols-2 gap-8">
-                  <div className="bg-white p-8 rounded-3xl border border-blue-50 shadow-sm space-y-6">
+            <div className="flex-grow overflow-y-auto p-5 sm:p-8 md:p-12 space-y-6 sm:space-y-8 md:space-y-12 bg-slate-50/30">
+               <div className="grid md:grid-cols-2 gap-5 sm:gap-8">
+                  <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-blue-50 shadow-sm space-y-4 sm:space-y-6">
                      <div className="flex items-center space-x-3 text-blue-600">
-                        <Wind className="w-6 h-6" />
-                        <h4 className="text-xl font-black">The 4-7-8 Protocol</h4>
+                        <Wind className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <h4 className="text-base sm:text-xl font-black">The 4-7-8 Protocol</h4>
                      </div>
-                     <p className="text-sm text-slate-500 font-medium leading-relaxed">Rapid parasympathetic activation to stop glucose dump from the liver.</p>
-                     <div className="space-y-4">
-                        <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-2xl">
-                           <span className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black">4</span>
-                           <span className="text-sm font-bold text-slate-700">Inhale deeply through nose</span>
+                     <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">Rapid parasympathetic activation to stop glucose dump from the liver.</p>
+                     <div className="space-y-3 sm:space-y-4">
+                        <div className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 bg-blue-50 rounded-xl sm:rounded-2xl">
+                           <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs sm:text-sm font-black shrink-0">4</span>
+                           <span className="text-xs sm:text-sm font-bold text-slate-700">Inhale deeply through nose</span>
                         </div>
-                        <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-2xl">
-                           <span className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black">7</span>
-                           <span className="text-sm font-bold text-slate-700">Hold breath with focus</span>
+                        <div className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 bg-blue-50 rounded-xl sm:rounded-2xl">
+                           <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs sm:text-sm font-black shrink-0">7</span>
+                           <span className="text-xs sm:text-sm font-bold text-slate-700">Hold breath with focus</span>
                         </div>
-                        <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-2xl">
-                           <span className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black">8</span>
-                           <span className="text-sm font-bold text-slate-700">Exhale slowly through mouth</span>
+                        <div className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 bg-blue-50 rounded-xl sm:rounded-2xl">
+                           <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs sm:text-sm font-black shrink-0">8</span>
+                           <span className="text-xs sm:text-sm font-bold text-slate-700">Exhale slowly through mouth</span>
                         </div>
                      </div>
                   </div>
-                  <div className="bg-white p-8 rounded-3xl border border-emerald-50 shadow-sm space-y-6">
+                  <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-emerald-50 shadow-sm space-y-4 sm:space-y-6">
                      <div className="flex items-center space-x-3 text-emerald-600">
-                        <Sun className="w-6 h-6" />
-                        <h4 className="text-xl font-black">Cortisol Blockers</h4>
+                        <Sun className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <h4 className="text-base sm:text-xl font-black">Cortisol Blockers</h4>
                      </div>
-                     <p className="text-sm text-slate-500 font-medium leading-relaxed">Environmental adjustments to lower systemic inflammatory load.</p>
-                     <ul className="space-y-4">
-                        <li className="flex items-start space-x-3 text-sm font-bold text-slate-700">
-                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
+                     <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">Environmental adjustments to lower systemic inflammatory load.</p>
+                     <ul className="space-y-3 sm:space-y-4">
+                        <li className="flex items-start space-x-2.5 sm:space-x-3 text-xs sm:text-sm font-bold text-slate-700">
+                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
                            <span>Morning Sunlight (5-10 mins) to anchor circadian rhythm.</span>
                         </li>
-                        <li className="flex items-start space-x-3 text-sm font-bold text-slate-700">
-                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
+                        <li className="flex items-start space-x-2.5 sm:space-x-3 text-xs sm:text-sm font-bold text-slate-700">
+                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
                            <span>Digital Detox 60 mins before bed to protect REM sleep.</span>
                         </li>
-                        <li className="flex items-start space-x-3 text-sm font-bold text-slate-700">
-                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
+                        <li className="flex items-start space-x-2.5 sm:space-x-3 text-xs sm:text-sm font-bold text-slate-700">
+                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
                            <span>Magnesium-rich snack (almonds) during stress peaks.</span>
                         </li>
                      </ul>
                   </div>
                </div>
             </div>
-            <div className="p-8 bg-slate-50 border-t border-slate-100 text-center shrink-0">
-               <button onClick={() => setIsResilienceModalOpen(false)} className="px-12 py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95">I Understand My Plan</button>
+            <div className="p-4 sm:p-8 bg-slate-50 border-t border-slate-100 text-center shrink-0">
+               <button onClick={() => setIsResilienceModalOpen(false)} className="px-8 py-3.5 sm:px-12 sm:py-4 bg-slate-900 text-white font-black rounded-xl sm:rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95 text-xs sm:text-sm md:text-base cursor-pointer">I Understand My Plan</button>
             </div>
           </div>
         </div>

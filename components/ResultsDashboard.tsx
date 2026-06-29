@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AssessmentResult, DiabetesStatus, RiskLevel } from '../types';
-import { ShieldAlert, CheckCircle, Flame, Apple, Dumbbell, RefreshCcw, Info, Activity, ClipboardList, Edit3, Printer, Save, UserPlus, Lock, Gift, Sparkles, Map, Thermometer, ArrowRight, Gauge } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Flame, Apple, Dumbbell, RefreshCcw, Info, Activity, ClipboardList, Edit3, Printer, Save, UserPlus, Lock, Gift, Sparkles, Map, Thermometer, ArrowRight, Gauge, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 
@@ -11,6 +11,94 @@ interface ResultsDashboardProps {
   onEdit: () => void;
   isGuest?: boolean;
 }
+
+const CombinedUnlockWidget: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
+  return (
+    <div className="mb-10 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-[3rem] p-8 md:p-12 text-slate-900 relative overflow-hidden border-2 border-blue-100 shadow-xl animate-in slide-in-from-top-6 duration-1000 print:hidden">
+      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-600/5 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/3"></div>
+      
+      <div className="relative z-10 space-y-8">
+        {/* Badges / Header Row */}
+        <div className="flex flex-wrap items-center gap-3 justify-center md:justify-start">
+          <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-blue-600/10 border border-blue-200 rounded-full text-blue-700 animate-pulse">
+            <Sparkles className="w-4 h-4 text-blue-600" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Analysis Complete</span>
+          </div>
+          <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-emerald-50 border border-emerald-100 rounded-full text-emerald-700">
+            <Lock className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Ready to unlock your ecosystem?</span>
+          </div>
+        </div>
+
+        {/* Title and Main Body */}
+        <div className="grid lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-7 space-y-4 text-center md:text-left">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none text-slate-900">
+              Calculated Baseline. <br />
+              <span className="text-blue-600">Want to Save Your Results?</span>
+            </h2>
+            <p className="text-slate-600 font-bold text-base sm:text-lg leading-relaxed">
+              Our engine has successfully simulated your metabolic future based on your clinical inputs. 
+              We highly encourage you to register a free account to securely save these results.
+            </p>
+            
+            {/* Benefits List */}
+            <div className="grid sm:grid-cols-2 gap-3 pt-2 text-left">
+              <div className="flex items-start space-x-2.5">
+                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-600">Track multi-profile health histories</span>
+              </div>
+              <div className="flex items-start space-x-2.5">
+                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-600">Generate secure clinical action plans</span>
+              </div>
+              <div className="flex items-start space-x-2.5">
+                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-600">Access real-time AI metabolic coaching</span>
+              </div>
+              <div className="flex items-start space-x-2.5">
+                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span className="text-xs font-bold text-slate-600">Analyze long-term blood sugar trends</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Call / Demo Account Box */}
+          <div className="lg:col-span-5 bg-white border border-blue-100 p-6 sm:p-8 rounded-[2rem] shadow-sm flex flex-col justify-between h-full space-y-6">
+            <div className="space-y-3 text-center lg:text-left">
+              <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                Not ready to sign up yet? Use our pre-configured demo credentials below to instantly access and preview the fully logged-in dashboard experience.
+              </p>
+              
+              <div className="inline-flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center justify-center lg:items-start xl:justify-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl w-full">
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-[10px] font-black text-slate-400 tracking-wider uppercase">Demo Email:</span>
+                  <code className="text-[10px] font-black text-blue-600 tracking-tight select-all">demo@diabetes-companion.ai</code>
+                </div>
+                <span className="text-slate-200 hidden sm:inline lg:hidden xl:inline">|</span>
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-[10px] font-black text-slate-400 tracking-wider uppercase">Password:</span>
+                  <code className="text-[10px] font-black text-blue-600 tracking-tight select-all">test123</code>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center lg:justify-start pt-2">
+              <button 
+                onClick={() => onNavigate('/auth?mode=register')} 
+                className="group/btn relative w-full sm:w-auto inline-flex items-center justify-center px-10 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 cursor-pointer ring-4 ring-blue-500/10"
+              >
+                <span>Save Results to Account</span>
+                <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, onEdit, isGuest = false }) => {
   const [needleRotation, setNeedleRotation] = useState(-90);
@@ -60,46 +148,30 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 animate-in fade-in duration-700 bg-white">
-      {/* Analysis Intro Section */}
-      <div className="mb-10 bg-blue-50 rounded-[3rem] p-8 md:p-12 text-slate-900 relative overflow-hidden border border-blue-100 shadow-sm animate-in slide-in-from-top-6 duration-1000 print:hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-           <div className="space-y-4 text-center md:text-left">
-              <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-blue-600/10 border border-blue-200 rounded-full">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">Analysis Complete</span>
-              </div>
-              <h2 className="text-4xl font-black tracking-tight leading-none text-slate-900">Calculated Baseline. <br />Forecasted Outcomes.</h2>
-              <p className="text-slate-500 font-medium text-lg max-w-xl">
-                Our engine has simulated your metabolic future based on the provided clinical indicators.
-              </p>
-           </div>
-           <div className="flex flex-col sm:flex-row gap-4">
-              {isGuest && (
-                <button 
-                  onClick={() => navigate('/auth')}
-                  className="px-10 py-6 bg-emerald-600 text-white font-black rounded-[2rem] hover:bg-emerald-700 transition-all shadow-xl flex items-center justify-center space-x-3 active:scale-95 ring-4 ring-emerald-500/10"
-                >
-                  <Save className="w-6 h-6" />
-                  <span>Save Results to Account</span>
-                  <ArrowRight className="w-5 h-5" />
+      {isGuest ? (
+        <CombinedUnlockWidget onNavigate={navigate} />
+      ) : (
+        /* Analysis Intro Section */
+        <div className="mb-10 bg-blue-50 rounded-[3rem] p-8 md:p-12 text-slate-900 relative overflow-hidden border border-blue-100 shadow-sm animate-in slide-in-from-top-6 duration-1000 print:hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+             <div className="space-y-4 text-center md:text-left">
+                <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-blue-600/10 border border-blue-200 rounded-full">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">Analysis Complete</span>
+                </div>
+                <h2 className="text-4xl font-black tracking-tight leading-none text-slate-900">Calculated Baseline. <br />Forecasted Outcomes.</h2>
+                <p className="text-slate-500 font-medium text-lg max-w-xl">
+                  Our engine has simulated your metabolic future based on the provided clinical indicators.
+                </p>
+             </div>
+             <div className="flex flex-col sm:flex-row gap-4">
+                <button onClick={startTutorial} className="px-10 py-6 bg-blue-600 text-white font-black rounded-[2rem] hover:bg-blue-700 transition-all shadow-xl flex items-center justify-center space-x-3 active:scale-95">
+                  <Map className="w-6 h-6" />
+                  <span>Take App Tour</span>
                 </button>
-              )}
-              <button onClick={startTutorial} className="px-10 py-6 bg-blue-600 text-white font-black rounded-[2rem] hover:bg-blue-700 transition-all shadow-xl flex items-center justify-center space-x-3 active:scale-95">
-                <Map className="w-6 h-6" />
-                <span>Take App Tour</span>
-              </button>
-           </div>
-        </div>
-      </div>
-
-      {isGuest && (
-        <div className="mb-8 p-6 bg-amber-50 border border-amber-100 rounded-[2rem] flex items-center space-x-4 animate-in slide-in-from-left-4 duration-700 delay-300">
-          <Info className="w-8 h-8 text-amber-500 shrink-0" />
-          <p className="text-sm font-bold text-amber-900 leading-relaxed">
-            You are currently viewing these results as a Guest. These findings will not be saved. 
-            <button onClick={() => navigate('/auth')} className="ml-1 text-blue-600 underline hover:text-blue-700">Register now</button> to track your trends over time.
-          </p>
+             </div>
+          </div>
         </div>
       )}
 
@@ -259,6 +331,10 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, onReset, on
           </div>
         </div>
       </div>
+
+      {isGuest && (
+        <CombinedUnlockWidget onNavigate={navigate} />
+      )}
 
       <div className="bg-blue-600 rounded-[3.5rem] p-10 md:p-16 relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>

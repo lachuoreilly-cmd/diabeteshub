@@ -9,7 +9,7 @@ import {
   TrendingUp, BarChart3, Users, ChevronDown, Check, UserPlus,
   Droplets, Heart, Brain, Zap, FlaskConical, ClipboardList,
   Database, Download, ShieldAlert, CheckCircle2, History,
-  Edit3, X, AlertTriangle, AlertCircle
+  Edit3, X, AlertTriangle, AlertCircle, Map
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
@@ -245,22 +245,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-500 pb-20">
+    <div id="health-dashboard-container" className="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-500 pb-20">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Health Dashboard</h1>
-          <div className="flex items-center space-x-3 mt-2">
-            <p className="text-slate-500 font-medium">Monitoring data for: <span className="text-blue-600 font-black">{activeProfile.name}</span></p>
-            <div className="h-4 w-px bg-slate-200"></div>
-            <div className="flex items-center text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></div>
-              Cloud Synced: {lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div>
+            <h1 id="health-dashboard-title" className="text-4xl font-black text-slate-900 tracking-tight">Health Dashboard</h1>
+            <div className="flex items-center space-x-3 mt-2">
+              <p className="text-slate-500 font-medium">Monitoring data for: <span className="text-blue-600 font-black">{activeProfile.name}</span></p>
             </div>
           </div>
+          <button 
+            onClick={() => window.dispatchEvent(new CustomEvent('startTutorial'))}
+            className="self-start sm:self-center inline-flex items-center space-x-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="Launch Interactive App Tour"
+          >
+            <Map className="w-4 h-4 text-blue-500" />
+            <span>Take App Tour</span>
+          </button>
         </div>
         
         {/* Profile Switcher Card */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm min-w-[300px]">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm w-full md:w-auto md:min-w-[300px]">
           <div className="flex items-center justify-between mb-3 px-1">
              <div className="flex items-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
                <Users className="w-3.5 h-3.5 mr-1.5" />
@@ -314,22 +319,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
       </header>
 
       {/* Latest Status Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className={`p-6 rounded-3xl border-2 shadow-sm flex items-center space-x-4 ${
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className={`p-4 sm:p-6 rounded-3xl border-2 shadow-sm flex items-center space-x-3 sm:space-x-4 ${
             latestAssessment?.status === 'Diabetic' ? 'bg-slate-50 border-slate-100' : 
             latestAssessment?.status === 'Pre-diabetic' ? 'bg-amber-50 border-amber-100' : 
             latestAssessment ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'
           }`}>
-            <div className={`p-3 rounded-2xl ${
+            <div className={`p-2.5 sm:p-3 rounded-2xl shrink-0 ${
               latestAssessment?.status === 'Diabetic' ? 'bg-slate-800' : 
               latestAssessment?.status === 'Pre-diabetic' ? 'bg-amber-500' : 
               latestAssessment ? 'bg-emerald-600' : 'bg-slate-400'
             }`}>
-              <Activity className="w-6 h-6 text-white" />
+              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assessment Status</p>
-              <p className={`text-xl font-black ${
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Assessment Status</p>
+              <p className={`text-lg sm:text-xl font-black truncate ${
                 latestAssessment?.status === 'Diabetic' ? 'text-slate-800' : 
                 latestAssessment?.status === 'Pre-diabetic' ? 'text-amber-600' : 
                 latestAssessment ? 'text-emerald-600' : 'text-slate-400'
@@ -337,54 +342,54 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center space-x-4">
-             <div className="p-3 rounded-2xl bg-indigo-600">
-               <Droplets className="w-6 h-6 text-white" />
+          <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center space-x-3 sm:space-x-4">
+             <div className="p-2.5 sm:p-3 rounded-2xl bg-indigo-600 shrink-0">
+               <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
              </div>
-             <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Glucose</p>
-                <p className="text-2xl font-black text-slate-900">
+             <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Avg Glucose</p>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 truncate">
                   {activeProfile.glucoseLogs.length > 0 
                     ? (activeProfile.glucoseLogs.reduce((a, b) => a + b.value, 0) / activeProfile.glucoseLogs.length).toFixed(1)
                     : '--'} 
-                  <span className="text-sm font-normal text-slate-400 ml-1">mg/dL</span>
+                  <span className="text-xs sm:text-sm font-normal text-slate-400 ml-1">mg/dL</span>
                 </p>
              </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center space-x-4">
-             <div className="p-3 rounded-2xl bg-slate-700">
-               <TrendingUp className="w-6 h-6 text-white" />
+          <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center space-x-3 sm:space-x-4">
+             <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-700 shrink-0">
+               <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
              </div>
-             <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Latest BMI</p>
-                <p className="text-2xl font-black text-slate-900">
+             <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Latest BMI</p>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 truncate">
                   {latestAssessment?.bmi || '--'} 
                 </p>
              </div>
           </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
         {/* Glucose Tracker */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div id="glucose-tracker-card" className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center space-x-3 text-indigo-700">
-            <Activity className="w-6 h-6" />
+            <Activity className="w-6 h-6 shrink-0" />
             <h2 className="text-xl font-bold">Glucose Tracker</h2>
           </div>
           <div className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input 
                 type="number" 
                 value={glucoseVal}
                 onChange={e => setGlucoseVal(e.target.value)}
                 placeholder="Value" 
-                className="flex-grow px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-bold"
+                className="w-full sm:flex-grow px-3 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-bold text-sm min-w-0"
               />
               <select 
                 value={glucoseType}
                 onChange={e => setGlucoseType(e.target.value as any)}
-                className="px-3 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white font-bold"
+                className="w-full sm:w-auto px-3 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white font-bold"
               >
                 <option>Fasting</option>
                 <option>Postprandial</option>
@@ -393,9 +398,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
             </div>
             <button 
               onClick={logGlucose}
-              className="w-full bg-indigo-700 text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-indigo-800 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-indigo-500/20"
+              className="w-full bg-indigo-700 text-white py-2.5 sm:py-3 rounded-xl font-black uppercase tracking-wider sm:tracking-widest text-xs hover:bg-indigo-800 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-indigo-500/20"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-5 h-5 shrink-0" />
               <span>Log Reading</span>
             </button>
           </div>
@@ -416,7 +421,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         </div>
 
         {/* Nutritional Meal Log */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div id="nutritional-analysis-card" className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 text-emerald-700">
               <Utensils className="w-6 h-6" />
@@ -428,14 +433,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
               value={mealText}
               onChange={e => setMealText(e.target.value)}
               placeholder="Describe your meal... (e.g. 'Oatmeal with berries and a coffee')"
-              className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none bg-white font-medium"
+              className="w-full h-24 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none bg-white font-medium text-xs sm:text-sm min-w-0"
             />
             <button 
               disabled={analyzingMeal || !mealText}
               onClick={handleAnalyzeMeal}
-              className="w-full bg-emerald-700 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-emerald-800 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
+              className="w-full bg-emerald-700 text-white py-2.5 sm:py-3 rounded-xl font-black uppercase tracking-wider sm:tracking-widest text-xs hover:bg-emerald-800 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
             >
-              {analyzingMeal ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+              {analyzingMeal ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5 shrink-0" />}
               <span>{analyzingMeal ? 'Synthesizing...' : 'Log & Process Meal'}</span>
             </button>
           </div>
@@ -446,8 +451,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
                 <button onClick={() => deleteLog('meal', log.id)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-slate-900 transition-opacity">
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <div className="flex items-start justify-between">
-                  <p className="font-bold text-slate-800 line-clamp-2 pr-6 leading-tight flex-grow">{log.description}</p>
+                <div className="flex items-start justify-between gap-1.5 sm:gap-2 overflow-hidden">
+                  <p className="font-bold text-slate-800 text-sm line-clamp-2 pr-6 leading-tight flex-grow min-w-0">{log.description}</p>
                   {log.analysis && (
                     <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
                       log.analysis.glycemicImpact === 'High' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
@@ -488,9 +493,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
         {/* Medication Tracking Card */}
-        <div className="bg-white text-slate-900 p-6 rounded-[2.5rem] space-y-8 shadow-sm border border-slate-200 flex flex-col">
+        <div className="bg-white text-slate-900 p-4 sm:p-6 rounded-[2.5rem] space-y-8 shadow-sm border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 text-indigo-700">
               <Pill className="w-6 h-6" />
@@ -543,7 +548,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         </div>
 
         {/* Data Vault (Database Control) */}
-        <div className="bg-slate-900 text-white p-8 rounded-[3rem] shadow-xl relative overflow-hidden flex flex-col space-y-8">
+        <div className="bg-slate-900 text-white p-5 sm:p-8 rounded-[3rem] shadow-xl relative overflow-hidden flex flex-col space-y-8">
            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
            <div className="relative z-10">
               <div className="flex items-center space-x-3 text-indigo-400 mb-6">
@@ -603,22 +608,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeProfile, onUpdateUser
         </div>
 
         {/* Activity Tracking */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center space-x-3 text-slate-800">
-            <Dumbbell className="w-6 h-6" />
+            <Dumbbell className="w-6 h-6 shrink-0" />
             <h2 className="text-xl font-bold">Quick Activity</h2>
           </div>
           <div className="space-y-4">
-            <input value={exType} onChange={e => setExType(e.target.value)} placeholder="Activity" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none font-bold" />
+            <input value={exType} onChange={e => setExType(e.target.value)} placeholder="Activity" className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-slate-200 outline-none font-bold text-xs sm:text-sm min-w-0" />
             <div className="flex gap-2">
-              <input type="number" value={exDuration} onChange={e => setExDuration(e.target.value)} placeholder="Mins" className="w-1/2 px-4 py-3 rounded-xl border border-slate-200 font-bold" />
-              <select value={exIntensity} onChange={e => setExIntensity(e.target.value as any)} className="w-1/2 px-4 py-3 rounded-xl border border-slate-200 font-bold">
+              <input type="number" value={exDuration} onChange={e => setExDuration(e.target.value)} placeholder="Mins" className="w-1/2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-slate-200 font-bold text-xs sm:text-sm min-w-0" />
+              <select value={exIntensity} onChange={e => setExIntensity(e.target.value as any)} className="w-1/2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-slate-200 font-bold text-xs sm:text-sm min-w-0">
                 <option value="Low">Low</option>
                 <option value="Moderate">Moderate</option>
                 <option value="High">High</option>
               </select>
             </div>
-            <button onClick={logExercise} className="w-full bg-slate-800 text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg">Log Effort</button>
+            <button onClick={logExercise} className="w-full bg-slate-800 text-white py-2.5 sm:py-3 rounded-xl font-black uppercase tracking-wider sm:tracking-widest text-xs shadow-lg">Log Effort</button>
           </div>
         </div>
       </div>

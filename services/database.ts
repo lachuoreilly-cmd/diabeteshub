@@ -350,6 +350,15 @@ class DatabaseService {
     return user;
   }
 
+  public async saveFeedback(feedback: { id: string; name: string; email: string; message: string; category: string; rating?: number; createdAt: string }) {
+    try {
+      const feedbackCollection = collection(firestore, 'feedback');
+      await setDoc(doc(feedbackCollection, feedback.id), feedback);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `feedback/${feedback.id}`);
+    }
+  }
+
   public async exportData(): Promise<string> {
     const user = await this.getCurrentUser();
     if (!user) throw new Error("User not authenticated");

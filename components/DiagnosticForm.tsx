@@ -26,6 +26,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AssessmentResult | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const [formHasError, setFormHasError] = useState(false);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -143,6 +144,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     return "";
   };
 
+  const handleNumberKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+      e.preventDefault();
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     let newValue: any = value;
@@ -150,7 +157,11 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     if (type === 'checkbox') {
       newValue = (e.target as HTMLInputElement).checked;
     } else if (type === 'number') {
-      newValue = value === '' ? undefined : parseFloat(value);
+      const parsed = value === '' ? undefined : parseFloat(value);
+      if (parsed !== undefined && parsed < 0) {
+        return;
+      }
+      newValue = parsed;
     }
 
     if (name.includes('.')) {
@@ -176,7 +187,14 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
     }
 
     const error = validateField(name, newValue);
-    setErrors(prev => ({ ...prev, [name]: error }));
+    setErrors(prev => {
+      const updated = { ...prev, [name]: error };
+      const hasAnyError = Object.values(updated).some(v => !!v);
+      if (!hasAnyError) {
+        setFormHasError(false);
+      }
+      return updated;
+    });
   };
 
   const isStepValid = () => {
@@ -193,7 +211,9 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
       });
     }
     setErrors(prev => ({ ...prev, ...stepErrors }));
-    return Object.keys(stepErrors).length === 0;
+    const isValid = Object.keys(stepErrors).length === 0;
+    setFormHasError(!isValid);
+    return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,7 +273,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   }
 
   const inputClasses = (name: string, fontSize: 'text-xl' | 'text-base' = 'text-xl') => `w-full px-3 py-2 sm:px-5 sm:py-3 rounded-lg border bg-white text-slate-900 outline-none transition-all font-bold ${fontSize} ${
-    errors[name] ? 'border-slate-800 ring-2 ring-slate-800/10' : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5'
+    errors[name] ? 'border-red-500 ring-4 ring-red-500/10 text-red-900 placeholder-red-300 bg-red-50/10 focus:border-red-600 focus:ring-red-600/15 animate-shake' : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5'
   }`;
 
   const Label = ({ text, sub }: { text: string, sub?: string }) => (
@@ -264,13 +284,13 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
   );
 
   return (
-    <div ref={containerRef} className="scroll-mt-24 sm:scroll-mt-28 outline-none max-w-7xl mx-auto px-4 py-12 bg-white">
+    <div id="diagnostic-form-container" ref={containerRef} className="scroll-mt-24 sm:scroll-mt-28 outline-none max-w-7xl mx-auto px-4 py-12 bg-white">
       <div className="bg-blue-50/30 rounded-[3rem] shadow-sm overflow-hidden border border-blue-100">
         {/* Header */}
         <div className="bg-white border-b border-blue-50 px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="text-center md:text-left">
-              <h2 ref={headerRef} tabIndex={-1} className="text-3xl font-black tracking-tight text-slate-900 outline-none">Health Intake Engine</h2>
+              <h2 id="diagnostic-form-title" ref={headerRef} tabIndex={-1} className="text-3xl font-black tracking-tight text-slate-900 outline-none">Health Intake Engine</h2>
               <p className="mt-1 text-slate-500 font-medium">Input clinical variables for HbA1c forecasting.</p>
             </div>
             <div className="flex items-center space-x-3">
@@ -287,6 +307,17 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
         </div>
 
   <form onSubmit={handleSubmit} className="p-6 sm:p-8 lg:p-14">
+          {formHasError && (
+            <div className="mb-8 p-5 bg-red-50 border-2 border-red-150 rounded-2xl flex items-start space-x-3.5 text-red-950 animate-in fade-in slide-in-from-top-4 duration-300">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-extrabold text-sm sm:text-base text-red-800">Invalid Values Identified</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-600 leading-relaxed">
+                  Please correct the highlighted inputs with valid parameters to continue your metabolic assessment.
+                </p>
+              </div>
+            </div>
+          )}
           {/* STEP 1: Biometrics & Anthropometrics */}
           {step === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
@@ -297,8 +328,8 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
                 <div className="space-y-1">
                   <Label text="Age" />
-                  <input type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses('age')} />
-                  {errors.age && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.age}</p>}
+                  <input type="number" min="0" onKeyDown={handleNumberKeyDown} name="age" value={formData.age} onChange={handleChange} className={inputClasses('age')} />
+                  {errors.age && <p className="text-sm text-red-600 font-extrabold mt-2 italic flex items-center gap-1">⚠️ {errors.age}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Biological Gender" />
@@ -323,16 +354,18 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                 </div>
                 <div className="space-y-1">
                   <Label text="Weight (Lbs)" />
-                  <input type="number" name="weightLbs" value={formData.weightLbs} onChange={handleChange} className={inputClasses('weightLbs')} />
-                  {errors.weightLbs && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.weightLbs}</p>}
+                  <input type="number" min="0" onKeyDown={handleNumberKeyDown} name="weightLbs" value={formData.weightLbs} onChange={handleChange} className={inputClasses('weightLbs')} />
+                  {errors.weightLbs && <p className="text-sm text-red-600 font-extrabold mt-2 italic flex items-center gap-1">⚠️ {errors.weightLbs}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Height (Feet)" />
-                  <input type="number" name="heightFeet" value={formData.heightFeet} onChange={handleChange} className={inputClasses('heightFeet')} />
+                  <input type="number" min="0" onKeyDown={handleNumberKeyDown} name="heightFeet" value={formData.heightFeet} onChange={handleChange} className={inputClasses('heightFeet')} />
+                  {errors.heightFeet && <p className="text-sm text-red-600 font-extrabold mt-2 italic flex items-center gap-1">⚠️ {errors.heightFeet}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label text="Height (Inches)" />
-                  <input type="number" name="heightInches" value={formData.heightInches} onChange={handleChange} className={inputClasses('heightInches')} />
+                  <input type="number" min="0" onKeyDown={handleNumberKeyDown} name="heightInches" value={formData.heightInches} onChange={handleChange} className={inputClasses('heightInches')} />
+                  {errors.heightInches && <p className="text-sm text-red-600 font-extrabold mt-2 italic flex items-center gap-1">⚠️ {errors.heightInches}</p>}
                 </div>
               </div>
             </div>
@@ -350,17 +383,17 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   <div className="grid grid-cols-2 gap-8">
                     <div>
                       <Label text="Systolic BP" sub="Upper Number" />
-                      <input type="number" name="systolicBP" value={formData.systolicBP} onChange={handleChange} className={inputClasses('systolicBP')} />
-                      {errors.systolicBP && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.systolicBP}</p>}
+                      <input type="number" min="0" onKeyDown={handleNumberKeyDown} name="systolicBP" value={formData.systolicBP} onChange={handleChange} className={inputClasses('systolicBP')} />
+                      {errors.systolicBP && <p className="text-sm text-red-600 font-extrabold mt-2 italic flex items-center gap-1">⚠️ {errors.systolicBP}</p>}
                     </div>
                     <div>
                       <Label text="Diastolic BP" sub="Lower Number" />
-                      <input type="number" name="diastolicBP" value={formData.diastolicBP} onChange={handleChange} className={inputClasses('diastolicBP')} />
-                      {errors.diastolicBP && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.diastolicBP}</p>}
+                      <input type="number" min="0" onKeyDown={handleNumberKeyDown} name="diastolicBP" value={formData.diastolicBP} onChange={handleChange} className={inputClasses('diastolicBP')} />
+                      {errors.diastolicBP && <p className="text-sm text-red-600 font-extrabold mt-2 italic flex items-center gap-1">⚠️ {errors.diastolicBP}</p>}
                     </div>
                   </div>
                   <div>
-                    <Label text="Family History" sub="T2D in first-degree relative?" />
+                    <Label text="Family History of Diabetes" sub="Do any of your parents, siblings, or children have Type 2 Diabetes?" />
                     <div className="flex gap-4">
                       {[true, false].map((val) => (
                         <button key={String(val)} type="button" onClick={() => setFormData({...formData, familyHistory: val})} className={`flex-1 py-2 sm:py-4 rounded-2xl font-black text-base sm:text-lg border transition-all ${formData.familyHistory === val ? 'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-100' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
@@ -377,12 +410,12 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   </div>
                   <div>
                     <Label text="Latest HbA1c (%)" sub="Leave blank if unknown" />
-                    <input type="number" step="0.1" name="hba1c" value={formData.hba1c} onChange={handleChange} placeholder="e.g. 5.7" className={inputClasses('hba1c')} />
-                    {errors.hba1c && <p className="text-sm text-slate-800 font-bold mt-2 italic">{errors.hba1c}</p>}
+                    <input type="number" min="0" step="0.1" onKeyDown={handleNumberKeyDown} name="hba1c" value={formData.hba1c} onChange={handleChange} placeholder="e.g. 5.7" className={inputClasses('hba1c')} />
+                    {errors.hba1c && <p className="text-sm text-red-600 font-extrabold mt-2 italic flex items-center gap-1">⚠️ {errors.hba1c}</p>}
                   </div>
                   <div>
                     <Label text="Fasting Glucose" sub="mg/dL" />
-                    <input type="number" name="lastGlucose" value={formData.lastGlucose} onChange={handleChange} placeholder="e.g. 98" className={inputClasses('lastGlucose')} />
+                    <input type="number" min="0" onKeyDown={handleNumberKeyDown} name="lastGlucose" value={formData.lastGlucose} onChange={handleChange} placeholder="e.g. 98" className={inputClasses('lastGlucose')} />
                   </div>
                 </div>
               </div>
@@ -401,6 +434,8 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                   <Label text="Sleep Duration" sub="Hours per night" />
                   <input 
                     type="number" 
+                    min="0"
+                    onKeyDown={handleNumberKeyDown}
                     name="sleep_hours_per_night" 
                     value={formData.sleep_hours_per_night} 
                     onChange={handleChange} 
@@ -515,7 +550,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
                 <div className="max-w-xl mx-auto space-y-6 px-8">
                   <h3 className="text-4xl font-black text-slate-900 leading-tight">Metabolic Lock Complete</h3>
                   <p className="text-slate-500 font-medium text-lg leading-relaxed">
-                    All indicators have been synchronized. Our biological engine is ready to synthesize your results and forecast your HbA1c trajectory.
+                    All indicators have been synchronized. Our biological engine is ready to simulate your results and forecast your HbA1c trajectory.
                   </p>
                 </div>
               </div>
@@ -525,7 +560,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
           {/* Navigation */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-between border-t border-blue-50 pt-8 gap-6">
             {step > 1 ? (
-              <button type="button" onClick={() => setStep(step - 1)} className="flex items-center space-x-3 text-slate-400 font-black px-10 py-5 hover:bg-slate-50 rounded-2xl transition-all">
+              <button type="button" onClick={() => { setFormHasError(false); setStep(step - 1); }} className="flex items-center space-x-3 text-slate-400 font-black px-10 py-5 hover:bg-slate-50 rounded-2xl transition-all">
                 <ChevronLeft className="w-6 h-6" />
                 <span className="uppercase tracking-widest text-xs">Previous</span>
               </button>
@@ -540,7 +575,7 @@ const DiagnosticForm: React.FC<DiagnosticFormProps> = ({ user, activeProfile, on
               {loading ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="uppercase tracking-widest text-sm">Synthesizing...</span>
+                  <span className="uppercase tracking-widest text-sm">Simulating your data...</span>
                 </>
               ) : (
                 <>

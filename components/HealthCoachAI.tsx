@@ -138,7 +138,7 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col animate-in fade-in duration-500 bg-white">
+    <div id="ai-coach-container" className="max-w-4xl mx-auto px-4 py-8 flex flex-col animate-in fade-in duration-500 bg-white">
       <div className="bg-white rounded-[2.5rem] border border-blue-100 shadow-sm overflow-hidden flex flex-col h-[650px] max-h-[80vh]">
         {/* Header */}
         <div className="bg-blue-50 p-6 flex items-center justify-between text-slate-900 border-b border-blue-100 shrink-0">
@@ -147,7 +147,7 @@ const HealthCoach: React.FC<HealthCoachProps> = ({ user, activeProfile }) => {
               <Bot className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 ref={headerRef} tabIndex={-1} className="text-xl font-black outline-none">Health Coach</h2>
+              <h2 id="ai-coach-title" ref={headerRef} tabIndex={-1} className="text-xl font-black outline-none">Health Coach</h2>
               <p className="text-xs text-blue-600 font-bold">Live Clinical AI</p>
             </div>
           </div>

@@ -37,12 +37,31 @@
         "currentMedications": { "type": "array", "items": { "type": "object" } }
       },
       "required": ["id", "name", "relationship"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback or contact information submissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "category": { "type": "string" },
+        "rating": { "type": "number" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "category", "message", "createdAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Stores user data and health profiles."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Stores site feedback and contact forms."
     }
   }
 }

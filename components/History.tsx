@@ -97,10 +97,10 @@ const History: React.FC<HistoryProps> = ({ user, activeProfile, onUpdate }) => {
     : 'none';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 space-y-12 animate-in fade-in duration-700 pb-24">
+    <div id="medical-history-container" className="max-w-7xl mx-auto px-4 py-12 space-y-12 animate-in fade-in duration-700 pb-24">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Trends & History</h1>
+          <h1 id="medical-history-title" className="text-4xl font-extrabold text-slate-900 tracking-tight">Trends & History</h1>
           <p className="text-slate-600 mt-2 font-medium">Review health evolution for: <span className="text-blue-600 font-bold">{activeProfile.name}</span></p>
         </div>
         

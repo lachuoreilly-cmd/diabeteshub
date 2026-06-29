@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { db } from '../services/database';
 import { User } from '../types';
 import { Mail, Lock, ArrowRight, Loader2, Info, ShieldCheck } from 'lucide-react';
@@ -8,14 +9,33 @@ interface AuthProps {
 }
 
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const [isLogin, setIsLogin] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
+    const state = location.state as { mode?: string } | null;
+    if (mode === 'register' || mode === 'signup' || (state && state.mode === 'register')) {
+      return false;
+    }
+    return true;
+  });
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serverStatus, setServerStatus] = useState<'connecting' | 'online'>('online');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
+    const state = location.state as { mode?: string } | null;
+    if (mode === 'register' || mode === 'signup' || (state && state.mode === 'register')) {
+      setIsLogin(false);
+    } else if (mode === 'login' || (state && state.mode === 'login')) {
+      setIsLogin(true);
+    }
+  }, [location]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -72,15 +92,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen flex flex-col items-center pt-8 md:pt-16 px-4 pb-12 bg-white">
       <div className="w-full max-w-xl">
-        <div className="mb-6 flex items-center justify-center space-x-4">
-           <div className="flex items-center px-4 py-2 bg-blue-50 rounded-full border border-blue-100 shadow-sm space-x-2">
-              <div className={`w-2 h-2 rounded-full ${serverStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></div>
-              <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest">
-                Server: {serverStatus === 'online' ? 'Synchronized' : 'Connecting...'}
-              </span>
-           </div>
-        </div>
-
         <div ref={containerRef} className="bg-white rounded-[3rem] shadow-2xl border border-blue-50 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="p-8 md:p-10 text-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
